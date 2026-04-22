@@ -1,18 +1,10 @@
-self.addEventListener('install', function(e) {
-  e.waitUntil(
-    caches.open('watermelon-app').then(function(cache) {
-      return cache.addAll([
-        'index.html',
-        'manifest.json'
-      ]);
-    })
-  );
+const CACHE_NAME = "melody-melon-tap-v2";
+const urlsToCache = ["./","./index.html","./manifest.json","./icon.png"];
+
+self.addEventListener("install", e => {
+  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(urlsToCache)));
 });
 
-self.addEventListener('fetch', function(e) {
-  e.respondWith(
-    caches.match(e.request).then(function(response) {
-      return response || fetch(e.request);
-    })
-  );
+self.addEventListener("fetch", e => {
+  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
 });
