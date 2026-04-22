@@ -19,12 +19,9 @@
     button.secondary{background:#607d8b}
     .watermelon{
       margin:1rem auto 1.4rem;
-      width:170px;
-      height:170px;
-      border-radius:50%;
+      width:170px;height:170px;border-radius:50%;
       background: radial-gradient(circle at center, #ff5252 70%, #2e7d32 30%);
-      border: 6px solid #2e7d32;
-      box-shadow:0 8px 18px rgba(0,0,0,.15);
+      border: 6px solid #2e7d32;box-shadow:0 8px 18px rgba(0,0,0,.15);
     }
     .row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
     @media(max-width:760px){.row{grid-template-columns:1fr}}
@@ -38,6 +35,19 @@
     .history{text-align:left}
     .small{font-size:.92rem;color:#5f6d76}
     .mono{font-family:monospace}
+    .bar{height:8px;background:#dde5ea;border-radius:999px;overflow:hidden;margin-top:6px}
+    .fill{height:100%;background:linear-gradient(90deg,#66bb6a,#ffee58,#ef5350)}
+    .scoreBox{
+      background:linear-gradient(135deg,#fff8e1,#f1f8e9);
+      border:1px solid #e6ebd9;border-radius:14px;padding:1rem;margin-top:1rem
+    }
+    .score{font-size:2rem;font-weight:900;color:#1b5e20}
+    .buyBadge{
+      display:inline-block;margin-top:.5rem;padding:.5rem .9rem;border-radius:999px;font-weight:800
+    }
+    .buy{background:#dcedc8;color:#1b5e20}
+    .maybe{background:#fff3cd;color:#8a6d3b}
+    .no{background:#ffcdd2;color:#b71c1c}
   </style>
 </head>
 <body>
@@ -58,13 +68,21 @@
     <div class="card">
       <h3>ผลลัพธ์หลัก</h3>
       <div id="result" class="result">ยังไม่มีผลลัพธ์</div>
+
+      <div class="scoreBox">
+        <div class="label">Melon Score</div>
+        <div id="melonScore" class="score">-</div>
+        <div id="buyBadge" class="buyBadge">-</div>
+        <div class="sub" id="scoreExplain">ยังไม่มีการประเมิน</div>
+      </div>
+
       <div class="metrics">
         <div class="metric"><div class="label">ระดับความสุก</div><div class="value" id="ripenessVal">-</div><div class="sub" id="amiVal">AMI: -</div></div>
-        <div class="metric"><div class="label">ความหวาน</div><div class="value" id="brixVal">-</div><div class="sub" id="sweetnessText">-</div></div>
-        <div class="metric"><div class="label">ความกรอบ</div><div class="value" id="firmVal">-</div><div class="sub" id="firmText">-</div></div>
-        <div class="metric"><div class="label">ความฉ่ำ</div><div class="value" id="juiceVal">-</div><div class="sub" id="juiceText">-</div></div>
-        <div class="metric"><div class="label">โพรงภายใน</div><div class="value" id="hollowVal">-</div><div class="sub" id="hollowText">-</div></div>
-        <div class="metric"><div class="label">ความเชื่อมั่น</div><div class="value" id="confVal">-</div><div class="sub" id="groupVal">ช่วงสุก: -</div></div>
+        <div class="metric"><div class="label">ความหวาน</div><div class="value" id="brixVal">-</div><div class="sub" id="sweetnessText">-</div><div class="bar"><div id="brixBar" class="fill" style="width:0%"></div></div></div>
+        <div class="metric"><div class="label">ความกรอบ</div><div class="value" id="firmVal">-</div><div class="sub" id="firmText">-</div><div class="bar"><div id="firmBar" class="fill" style="width:0%"></div></div></div>
+        <div class="metric"><div class="label">ความฉ่ำ</div><div class="value" id="juiceVal">-</div><div class="sub" id="juiceText">-</div><div class="bar"><div id="juiceBar" class="fill" style="width:0%"></div></div></div>
+        <div class="metric"><div class="label">โพรงภายใน</div><div class="value" id="hollowVal">-</div><div class="sub" id="hollowText">-</div><div class="bar"><div id="hollowBar" class="fill" style="width:0%"></div></div></div>
+        <div class="metric"><div class="label">ความเชื่อมั่น</div><div class="value" id="confVal">-</div><div class="sub" id="groupVal">ช่วงสุก: -</div><div class="bar"><div id="confBar" class="fill" style="width:0%"></div></div></div>
       </div>
     </div>
     <div class="card history">
@@ -110,15 +128,12 @@ function brixModel(group,Q,tau,h){
 }
 function movingAverage(arr,win=3){
   if(arr.length<=2)return arr.slice();
-  const out=[];
-  for(let i=0;i<arr.length;i++){
-    let a=Math.max(0,i-Math.floor(win/2)), b=Math.min(arr.length,i+Math.floor(win/2)+1), s=0;
-    for(let j=a;j<b;j++) s+=arr[j];
-    out.push(s/(b-a));
-  }
+  const out=[]; for(let i=0;i<arr.length;i++){ let a=Math.max(0,i-Math.floor(win/2)), b=Math.min(arr.length,i+Math.floor(win/2)+1), s=0; for(let j=a;j<b;j++) s+=arr[j]; out.push(s/(b-a)); }
   return out;
 }
 function getRMS(samples){let s=0; for(let i=0;i<samples.length;i++) s+=samples[i]*samples[i]; return Math.sqrt(s/samples.length);}
+function toStars(value,min,max){ let score=(value-min)/(max-min); score=clamp(score,0,1); return Math.round(score*5); }
+function renderStars(n){ return "⭐".repeat(n) + "☆".repeat(5-n); }
 
 let audioContext=null, mediaStream=null, analyser=null, freqData=null, timeData=null, rafId=null;
 const NUM_TAPS=3;
@@ -127,9 +142,7 @@ let tapFeatures=[], listening=false, captureState="idle", eventFrames=[], cooldo
 async function setupAudio(){
   if(!audioContext) audioContext=new (window.AudioContext||window.webkitAudioContext)();
   if(!mediaStream){
-    mediaStream=await navigator.mediaDevices.getUserMedia({
-      audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}
-    });
+    mediaStream=await navigator.mediaDevices.getUserMedia({ audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false} });
     const source=audioContext.createMediaStreamSource(mediaStream);
     analyser=audioContext.createAnalyser();
     analyser.fftSize=4096;
@@ -144,14 +157,11 @@ async function startSession(){
   tapFeatures=[]; updateTapProgress(); setStatus("กำลังเตรียมไมโครโฟน...");
   document.getElementById("startBtn").disabled=true;
   try{
-    await setupAudio();
-    await audioContext.resume();
+    await setupAudio(); await audioContext.resume();
     listening=true; captureState="idle"; cooldownFrames=0;
     estimateNoiseFloor(10);
   }catch(err){
-    console.error(err);
-    setStatus("ไม่สามารถเข้าถึงไมโครโฟนได้");
-    document.getElementById("startBtn").disabled=false;
+    console.error(err); setStatus("ไม่สามารถเข้าถึงไมโครโฟนได้"); document.getElementById("startBtn").disabled=false;
   }
 }
 function estimateNoiseFloor(framesLeft){
@@ -169,12 +179,7 @@ function loop(){
   const onset=rms>Math.max(0.018, noiseFloor*3.0);
 
   if(cooldownFrames>0){cooldownFrames--; rafId=requestAnimationFrame(loop); return;}
-
-  if(captureState==="idle" && onset){
-    captureState="capturing";
-    eventFrames=[];
-    setStatus(`ตรวจพบการเคาะครั้งที่ ${tapFeatures.length+1} ...`);
-  }
+  if(captureState==="idle" && onset){ captureState="capturing"; eventFrames=[]; setStatus(`ตรวจพบการเคาะครั้งที่ ${tapFeatures.length+1} ...`); }
 
   if(captureState==="capturing"){
     analyser.getFloatTimeDomainData(timeData);
@@ -183,22 +188,13 @@ function loop(){
     if(eventFrames.length>=18){
       const feat=extractFeaturesFromEvent(eventFrames);
       if(feat){
-        tapFeatures.push(feat);
-        updateTapProgress();
-        if(tapFeatures.length>=NUM_TAPS){
-          listening=false;
-          analyzeSession();
-          document.getElementById("startBtn").disabled=false;
-          return;
-        } else {
-          setStatus(`สำเร็จ ${tapFeatures.length}/${NUM_TAPS} ครั้ง กรุณาเคาะอีกครั้ง`);
-        }
-      }else{
+        tapFeatures.push(feat); updateTapProgress();
+        if(tapFeatures.length>=NUM_TAPS){ listening=false; analyzeSession(); document.getElementById("startBtn").disabled=false; return; }
+        else setStatus(`สำเร็จ ${tapFeatures.length}/${NUM_TAPS} ครั้ง กรุณาเคาะอีกครั้ง`);
+      } else {
         setStatus("การตรวจจับครั้งนี้ไม่ชัดเจน ลองเคาะใหม่");
       }
-      captureState="idle";
-      eventFrames=[];
-      cooldownFrames=8;
+      captureState="idle"; eventFrames=[]; cooldownFrames=8;
     }
   }
   rafId=requestAnimationFrame(loop);
@@ -216,17 +212,12 @@ function extractFeaturesFromEvent(frames){
   const freqs=[], mags=[];
   for(let i=0;i<nBins;i++){
     const f=i*binSize;
-    if(f>=50&&f<=900){
-      const mag=Math.pow(10, avgDb[i]/20);
-      freqs.push(f);
-      mags.push(isFinite(mag)?mag:0);
-    }
+    if(f>=50&&f<=900){ const mag=Math.pow(10, avgDb[i]/20); freqs.push(f); mags.push(isFinite(mag)?mag:0); }
   }
   const magSum=mags.reduce((a,b)=>a+b,0);
   if(!isFinite(magSum)||magSum<=0) return null;
 
-  let peakIdx=0;
-  for(let i=1;i<mags.length;i++) if(mags[i]>mags[peakIdx]) peakIdx=i;
+  let peakIdx=0; for(let i=1;i<mags.length;i++) if(mags[i]>mags[peakIdx]) peakIdx=i;
   const fPeak=freqs[peakIdx], peak=mags[peakIdx], target=peak/Math.sqrt(2);
 
   function interp(i1,i2,targetY){
@@ -256,10 +247,7 @@ function extractFeaturesFromEvent(frames){
     const n=xs.length; let sx=0,sy=0,sxx=0,sxy=0;
     for(let i=0;i<n;i++){sx+=xs[i]; sy+=ys[i]; sxx+=xs[i]*xs[i]; sxy+=xs[i]*ys[i];}
     const denom=n*sxx-sx*sx;
-    if(denom!==0){
-      const slope=(n*sxy-sx*sy)/denom;
-      if(slope<0) tau=-1/slope;
-    }
+    if(denom!==0){ const slope=(n*sxy-sx*sy)/denom; if(slope<0) tau=-1/slope; }
   }
   return {fPeak,Q,tau,fMean,fStd,fVar,hollow,bw};
 }
@@ -270,11 +258,11 @@ function confidenceScore(features){
   const qSpread=Math.max(...qVals)-Math.min(...qVals);
   return clamp(94 - qSpread*1.5, 50, 97);
 }
-
 function updateWatermelonColor(fleshColor){
   const melon = document.getElementById("watermelon");
   melon.style.background = `radial-gradient(circle at center, ${fleshColor} 70%, #2e7d32 30%)`;
 }
+function setBar(id, percent){ document.getElementById(id).style.width = `${clamp(percent,0,100)}%`; }
 
 function analyzeSession(){
   const avg={};
@@ -295,24 +283,74 @@ function analyzeSession(){
   const hProb=hollowProbability(avg.hollow);
   const conf=confidenceScore(tapFeatures);
 
+  const sweetStars = toStars(brix, 4.5, 14);
+  const firmStars = toStars(firmness, 0, 20);
+  const juiceStars = toStars(juice, 40, 90);
+  const hollowStars = 5 - toStars(hProb, 0, 1);
+  const confStars = toStars(conf, 50, 100);
+
+  // weighted final score: sweet 30, firm 20, juice 15, non-hollow 20, confidence 15
+  const melonScore = Math.round(
+    0.30 * (brix / 14 * 100) +
+    0.20 * (firmness / 20 * 100) +
+    0.15 * juice +
+    0.20 * ((1 - hProb) * 100) +
+    0.15 * conf
+  );
+
+  let buyText = "", buyClass = "", scoreExplain = "";
+  if (melonScore >= 80 && hProb < 0.35 && (group === "C" || group === "D")) {
+    buyText = "แนะนำให้ซื้อ";
+    buyClass = "buy";
+    scoreExplain = "คะแนนรวมดีมาก ความเสี่ยงโพรงต่ำ เหมาะซื้อ";
+  } else if (melonScore >= 60 && hProb < 0.65) {
+    buyText = "พอซื้อได้";
+    buyClass = "maybe";
+    scoreExplain = "คุณภาพพอใช้ แนะนำดูราคาและสภาพภายนอกเพิ่ม";
+  } else {
+    buyText = "ไม่แนะนำซื้อ";
+    buyClass = "no";
+    scoreExplain = "คะแนนรวมต่ำ หรือมีความเสี่ยงโพรง/สุกเกิน";
+  }
+
   updateWatermelonColor(ripe.flesh);
 
   const result=document.getElementById("result");
   result.style.backgroundColor=ripe.color;
-  result.innerHTML=`ความถี่หลักเฉลี่ย: ${avg.fPeak.toFixed(1)} Hz<br>ระดับความสุก: ${ripe.label} (${ripe.detail})<br>%Brix ประมาณ: ${brix.toFixed(1)} °Bx`;
+  result.innerHTML = `
+    ความถี่หลักเฉลี่ย: ${avg.fPeak.toFixed(1)} Hz<br>
+    ระดับความสุก: ${ripe.label} (${ripe.detail})<br>
+    ความหวาน: ${renderStars(sweetStars)} (${brix.toFixed(1)} °Bx)<br>
+    ความกรอบ: ${renderStars(firmStars)}<br>
+    ความฉ่ำ: ${renderStars(juiceStars)}<br>
+    โพรงภายใน: ${renderStars(hollowStars)}<br>
+    ความเชื่อมั่น: ${renderStars(confStars)} (${conf.toFixed(0)}%)
+  `;
+
+  document.getElementById("melonScore").innerText = `${melonScore}/100`;
+  const badge = document.getElementById("buyBadge");
+  badge.className = `buyBadge ${buyClass}`;
+  badge.innerText = buyText;
+  document.getElementById("scoreExplain").innerText = scoreExplain;
 
   document.getElementById("ripenessVal").innerText=`${ripe.label}`;
   document.getElementById("amiVal").innerText=`AMI: ${ripe.ami.toFixed(0)} (${ripe.detail})`;
   document.getElementById("brixVal").innerText=`${brix.toFixed(1)} °Bx`;
-  document.getElementById("sweetnessText").innerText=sweetnessLabel(brix);
+  document.getElementById("sweetnessText").innerText=`${sweetnessLabel(brix)} • ${renderStars(sweetStars)}`;
   document.getElementById("firmVal").innerText=firmness.toFixed(1);
-  document.getElementById("firmText").innerText=firmness>=12?"กรอบดี":firmness>=7?"กรอบปานกลาง":"กรอบน้อย";
+  document.getElementById("firmText").innerText=`${firmness>=12?"กรอบดี":firmness>=7?"กรอบปานกลาง":"กรอบน้อย"} • ${renderStars(firmStars)}`;
   document.getElementById("juiceVal").innerText=`${juice.toFixed(0)} %`;
-  document.getElementById("juiceText").innerText=juice>=70?"ฉ่ำมาก":juice>=55?"ฉ่ำปานกลาง":"ฉ่ำน้อย";
+  document.getElementById("juiceText").innerText=`${juice>=70?"ฉ่ำมาก":juice>=55?"ฉ่ำปานกลาง":"ฉ่ำน้อย"} • ${renderStars(juiceStars)}`;
   document.getElementById("hollowVal").innerText=`${(hProb*100).toFixed(0)} %`;
-  document.getElementById("hollowText").innerText=hProb>0.7?"มีโพรง":hProb>0.3?"เสี่ยงโพรง":"ปกติ";
+  document.getElementById("hollowText").innerText=`${hProb>0.7?"มีโพรง":hProb>0.3?"เสี่ยงโพรง":"ปกติ"} • ${renderStars(hollowStars)}`;
   document.getElementById("confVal").innerText=`${conf.toFixed(0)} %`;
-  document.getElementById("groupVal").innerText=`ช่วงสุก: ${group}`;
+  document.getElementById("groupVal").innerText=`ช่วงสุก: ${group} • ${renderStars(confStars)}`;
+
+  setBar("brixBar", (brix/14)*100);
+  setBar("firmBar", (firmness/20)*100);
+  setBar("juiceBar", juice);
+  setBar("hollowBar", (1-hProb)*100);
+  setBar("confBar", conf);
 
   document.getElementById("featureList").innerHTML = `
     <li>Q_phone เฉลี่ย: ${avg.Q.toFixed(2)}</li>
@@ -323,13 +361,14 @@ function analyzeSession(){
     <li>f_std: ${avg.fStd.toFixed(1)} Hz</li>
     <li>f_variance: ${avg.fVar.toFixed(1)}</li>
     <li>hollow proxy: ${avg.hollow.toFixed(3)}</li>
-    <li>bandwidth (-3 dB): ${isFinite(avg.bw)?avg.bw.toFixed(2):"-"}</li>`;
+    <li>bandwidth (-3 dB): ${isFinite(avg.bw)?avg.bw.toFixed(2):"-"}</li>
+    <li>Melon Score: ${melonScore}/100</li>`;
 
-  const msg=new SpeechSynthesisUtterance(`แตงโมระดับ ${ripe.label} ความหวานประมาณ ${brix.toFixed(1)} บริกซ์ ความเชื่อมั่น ${conf.toFixed(0)} เปอร์เซ็นต์`);
+  const msg = new SpeechSynthesisUtterance(`${buyText} แตงโมระดับ ${ripe.label} ความหวานประมาณ ${brix.toFixed(1)} บริกซ์ คะแนนรวม ${melonScore} จาก 100`);
   speechSynthesis.cancel(); speechSynthesis.speak(msg);
 
   const history=JSON.parse(localStorage.getItem("history")||"[]");
-  history.unshift({time:new Date().toLocaleString(),fPeak:avg.fPeak,Q:Qcal,level:ripe.label,brix:brix,conf:conf});
+  history.unshift({time:new Date().toLocaleString(),fPeak:avg.fPeak,Q:Qcal,level:ripe.label,brix:brix,conf:conf,score:melonScore,buy:buyText});
   localStorage.setItem("history", JSON.stringify(history.slice(0,8)));
   updateHistory();
   setStatus("ตรวจวัดเสร็จแล้ว");
@@ -339,7 +378,7 @@ function updateTapProgress(){document.getElementById("tapProgress").innerText=`$
 function updateHistory(){
   const historyList=document.getElementById("history");
   const history=JSON.parse(localStorage.getItem("history")||"[]");
-  historyList.innerHTML=history.map(item=>`<li>${item.time}: ${item.fPeak.toFixed(1)} Hz | Q=${item.Q.toFixed(1)} | ${item.level} | ${item.brix.toFixed(1)} °Bx | ความเชื่อมั่น ${item.conf.toFixed(0)}%</li>`).join("");
+  historyList.innerHTML=history.map(item=>`<li>${item.time}: ${item.level} | ${item.brix.toFixed(1)} °Bx | Score ${item.score}/100 | ${item.buy}</li>`).join("");
 }
 function resetAll(){
   listening=false; if(rafId) cancelAnimationFrame(rafId);
@@ -355,11 +394,17 @@ function resetAll(){
   document.getElementById("firmText").innerText="-";
   document.getElementById("juiceText").innerText="-";
   document.getElementById("hollowText").innerText="-";
+  document.getElementById("melonScore").innerText="-";
+  const badge = document.getElementById("buyBadge");
+  badge.className = "buyBadge";
+  badge.innerText = "-";
+  document.getElementById("scoreExplain").innerText = "ยังไม่มีการประเมิน";
+  ["brixBar","firmBar","juiceBar","hollowBar","confBar"].forEach(id=>setBar(id,0));
   updateWatermelonColor("#ff5252");
   document.getElementById("startBtn").disabled=false;
 }
 function shareResult(){
-  const text=document.getElementById("result").innerText + "\nความเชื่อมั่น: " + document.getElementById("confVal").innerText + "\nโพรงภายใน: " + document.getElementById("hollowText").innerText;
+  const text = document.getElementById("result").innerText + "\nMelon Score: " + document.getElementById("melonScore").innerText + "\nคำแนะนำ: " + document.getElementById("buyBadge").innerText;
   if(navigator.share) navigator.share({title:"ผลวัดแตงโม", text});
   else alert("อุปกรณ์นี้ไม่รองรับการแชร์");
 }
