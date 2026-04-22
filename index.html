@@ -17,12 +17,7 @@
     .controls{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap}
     button{padding:1rem 1.2rem;border:none;border-radius:12px;background:#4caf50;color:#fff;cursor:pointer;font-size:1rem}
     button.secondary{background:#607d8b}
-    .watermelon{
-      margin:1rem auto 1.4rem;
-      width:170px;height:170px;border-radius:50%;
-      background: radial-gradient(circle at center, #ff5252 70%, #2e7d32 30%);
-      border: 6px solid #2e7d32;box-shadow:0 8px 18px rgba(0,0,0,.15);
-    }
+    .watermelon{margin:1rem auto 1.4rem;width:170px;height:170px;border-radius:50%;background:radial-gradient(circle at center,#ff5252 70%,#2e7d32 30%);border:6px solid #2e7d32;box-shadow:0 8px 18px rgba(0,0,0,.15)}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
     @media(max-width:760px){.row{grid-template-columns:1fr}}
     .result{padding:1rem;border-radius:14px;background:#e8f5e9;font-weight:700;line-height:1.7}
@@ -37,17 +32,16 @@
     .mono{font-family:monospace}
     .bar{height:8px;background:#dde5ea;border-radius:999px;overflow:hidden;margin-top:6px}
     .fill{height:100%;background:linear-gradient(90deg,#66bb6a,#ffee58,#ef5350)}
-    .scoreBox{
-      background:linear-gradient(135deg,#fff8e1,#f1f8e9);
-      border:1px solid #e6ebd9;border-radius:14px;padding:1rem;margin-top:1rem
-    }
+    .scoreBox{background:linear-gradient(135deg,#fff8e1,#f1f8e9);border:1px solid #e6ebd9;border-radius:14px;padding:1rem;margin-top:1rem}
     .score{font-size:2rem;font-weight:900;color:#1b5e20}
-    .buyBadge{
-      display:inline-block;margin-top:.5rem;padding:.5rem .9rem;border-radius:999px;font-weight:800
-    }
+    .buyBadge{display:inline-block;margin-top:.5rem;padding:.5rem .9rem;border-radius:999px;font-weight:800}
     .buy{background:#dcedc8;color:#1b5e20}
     .maybe{background:#fff3cd;color:#8a6d3b}
     .no{background:#ffcdd2;color:#b71c1c}
+    .sig{display:inline-block;padding:.35rem .75rem;border-radius:999px;font-weight:800;margin-top:.5rem}
+    .sig-good{background:#dcedc8;color:#1b5e20}
+    .sig-mid{background:#fff3cd;color:#8a6d3b}
+    .sig-bad{background:#ffcdd2;color:#b71c1c}
   </style>
 </head>
 <body>
@@ -62,6 +56,7 @@
     </div>
     <p id="status">สถานะ: พร้อมเริ่มวัด</p>
     <div class="small">วิเคราะห์ช่วง <span class="mono">50–900 Hz</span> | จำนวนครั้ง <span id="tapProgress">0/3</span></div>
+    <div id="signalBadge" class="sig sig-mid">คุณภาพสัญญาณ: รอวัด</div>
   </div>
 
   <div class="row">
@@ -105,9 +100,23 @@ const BRIX_MODEL = {
 };
 
 function clamp(x,lo,hi){return Math.max(lo,Math.min(hi,x));}
-function firmnessProxy(Q,fvar){return clamp(-10.248089+0.00583836*Q+0.00071951*fvar,0,30);}
-function juiceProxy(tau,Q){return clamp(56.841913-3.857017*tau+0.005154*Q,30,100);}
-function hollowProbability(h){if(!isFinite(h))return 0; if(h>0.42)return 0.90; if(h>0.30)return 0.65; if(h>0.22)return 0.35; return 0.10;}
+function safe(v, fallback=0){return (Number.isFinite(v) && !Number.isNaN(v)) ? v : fallback;}
+function getFallback(k){
+  switch(k){
+    case "Q": return 10;
+    case "tau": return 0.08;
+    case "fMean": return 300;
+    case "fStd": return 50;
+    case "fVar": return 2500;
+    case "hollow": return 0.25;
+    case "fPeak": return 250;
+    case "bw": return 25;
+    default: return 0;
+  }
+}
+function firmnessProxy(Q,fvar){return clamp(-10.248089+0.00583836*safe(Q,10)+0.00071951*safe(fvar,2500),0,30);}
+function juiceProxy(tau,Q){return clamp(56.841913-3.857017*safe(tau,0.08)+0.005154*safe(Q,10),30,100);}
+function hollowProbability(h){h=safe(h,0.25); if(h>0.42)return 0.90; if(h>0.30)return 0.65; if(h>0.22)return 0.35; return 0.10;}
 function sweetnessLabel(brix){if(brix<7)return "หวานน้อย"; if(brix<10)return "หวานปานกลาง"; if(brix<12)return "หวาน"; return "หวานมาก";}
 function ripenessFromGroup(g){
   switch(g){
@@ -118,11 +127,11 @@ function ripenessFromGroup(g){
     default: return {label:"-", detail:"-", color:"#cfd8dc", ami:0, flesh:"#ff5252"};
   }
 }
-function classifyPre(Qp){ if(Qp<8)return "E"; if(Qp<15)return "D"; if(Qp<25)return "C"; return "A"; }
-function classifyPost(Q){ if(Q<10)return "E"; if(Q<20)return "D"; if(Q<30)return "C"; return "A"; }
+function classifyPre(Qp){ Qp=safe(Qp,10); if(Qp<8)return "E"; if(Qp<15)return "D"; if(Qp<25)return "C"; return "A"; }
+function classifyPost(Q){ Q=safe(Q,10); if(Q<10)return "E"; if(Q<20)return "D"; if(Q<30)return "C"; return "A"; }
 function brixModel(group,Q,tau,h){
   const m=BRIX_MODEL[group]||BRIX_MODEL.C;
-  let raw = m.a + m.bQ*Q + m.btau*tau + m.bh*h;
+  let raw = m.a + m.bQ*safe(Q,10) + m.btau*safe(tau,0.08) + m.bh*safe(h,0.25);
   raw = 0.72 * raw + 1.8;
   return clamp(raw, 4.5, 14.0);
 }
@@ -132,8 +141,8 @@ function movingAverage(arr,win=3){
   return out;
 }
 function getRMS(samples){let s=0; for(let i=0;i<samples.length;i++) s+=samples[i]*samples[i]; return Math.sqrt(s/samples.length);}
-function toStars(value,min,max){ let score=(value-min)/(max-min); score=clamp(score,0,1); return Math.round(score*5); }
-function renderStars(n){ return "⭐".repeat(n) + "☆".repeat(5-n); }
+function toStars(value,min,max){ let score=(safe(value,min)-min)/(max-min); score=clamp(score,0,1); return Math.round(score*5); }
+function renderStars(n){ n = clamp(Math.round(safe(n,0)),0,5); return "⭐".repeat(n) + "☆".repeat(5-n); }
 
 let audioContext=null, mediaStream=null, analyser=null, freqData=null, timeData=null, rafId=null;
 const NUM_TAPS=3;
@@ -156,12 +165,14 @@ async function setupAudio(){
 async function startSession(){
   tapFeatures=[]; updateTapProgress(); setStatus("กำลังเตรียมไมโครโฟน...");
   document.getElementById("startBtn").disabled=true;
+  setSignalQuality("รอวัด", "mid");
   try{
     await setupAudio(); await audioContext.resume();
     listening=true; captureState="idle"; cooldownFrames=0;
     estimateNoiseFloor(10);
   }catch(err){
     console.error(err); setStatus("ไม่สามารถเข้าถึงไมโครโฟนได้"); document.getElementById("startBtn").disabled=false;
+    setSignalQuality("ใช้งานไม่ได้", "bad");
   }
 }
 function estimateNoiseFloor(framesLeft){
@@ -192,7 +203,8 @@ function loop(){
         if(tapFeatures.length>=NUM_TAPS){ listening=false; analyzeSession(); document.getElementById("startBtn").disabled=false; return; }
         else setStatus(`สำเร็จ ${tapFeatures.length}/${NUM_TAPS} ครั้ง กรุณาเคาะอีกครั้ง`);
       } else {
-        setStatus("การตรวจจับครั้งนี้ไม่ชัดเจน ลองเคาะใหม่");
+        setStatus("เสียงไม่ชัด กรุณาเคาะใหม่");
+        setSignalQuality("สัญญาณอ่อน/ไม่ชัด", "bad");
       }
       captureState="idle"; eventFrames=[]; cooldownFrames=8;
     }
@@ -212,16 +224,22 @@ function extractFeaturesFromEvent(frames){
   const freqs=[], mags=[];
   for(let i=0;i<nBins;i++){
     const f=i*binSize;
-    if(f>=50&&f<=900){ const mag=Math.pow(10, avgDb[i]/20); freqs.push(f); mags.push(isFinite(mag)?mag:0); }
+    if(f>=50&&f<=900){
+      const mag=Math.pow(10, avgDb[i]/20);
+      freqs.push(f);
+      mags.push(isFinite(mag)?mag:0);
+    }
   }
   const magSum=mags.reduce((a,b)=>a+b,0);
-  if(!isFinite(magSum)||magSum<=0) return null;
+  if(!isFinite(magSum) || magSum <= 1e-6) return null;
 
   let peakIdx=0; for(let i=1;i<mags.length;i++) if(mags[i]>mags[peakIdx]) peakIdx=i;
-  const fPeak=freqs[peakIdx], peak=mags[peakIdx], target=peak/Math.sqrt(2);
+  const fPeak=safe(freqs[peakIdx], getFallback("fPeak"));
+  const peak=safe(mags[peakIdx], 0);
+  const target=peak/Math.sqrt(2);
 
   function interp(i1,i2,targetY){
-    const x1=freqs[i1],x2=freqs[i2],y1=mags[i1],y2=mags[i2];
+    const x1=safe(freqs[i1],0), x2=safe(freqs[i2],0), y1=safe(mags[i1],0), y2=safe(mags[i2],0);
     if(y2===y1) return x1;
     return x1+(targetY-y1)*(x2-x1)/(y2-y1);
   }
@@ -229,35 +247,55 @@ function extractFeaturesFromEvent(frames){
   const f1=(l===peakIdx)?NaN:interp(l,l+1,target);
   let r=peakIdx; while(r<mags.length-1&&mags[r]>=target) r++;
   const f2=(r===peakIdx||r>=mags.length)?NaN:interp(r-1,r,target);
-  const bw=(isFinite(f1)&&isFinite(f2)&&f2>f1)?(f2-f1):NaN;
-  const Q=(isFinite(bw)&&bw>0)?(fPeak/bw):NaN;
+  const bw=(isFinite(f1)&&isFinite(f2)&&f2>f1)?(f2-f1):getFallback("bw");
+  const Q=(isFinite(bw)&&bw>0)?(fPeak/bw):getFallback("Q");
 
-  let fMean=0; for(let i=0;i<freqs.length;i++) fMean+=freqs[i]*mags[i]; fMean/=magSum;
-  let fVar=0; for(let i=0;i<freqs.length;i++) fVar+=mags[i]*Math.pow(freqs[i]-fMean,2); fVar/=magSum;
-  const fStd=Math.sqrt(Math.max(0,fVar));
-  const hollow=fMean>0?(fStd/fMean):NaN;
+  let fMean=0; for(let i=0;i<freqs.length;i++) fMean+=safe(freqs[i],0)*safe(mags[i],0); fMean = magSum>0 ? fMean/magSum : getFallback("fMean");
+  let fVar=0; for(let i=0;i<freqs.length;i++) fVar+=safe(mags[i],0)*Math.pow(safe(freqs[i],0)-fMean,2); fVar = magSum>0 ? fVar/magSum : getFallback("fVar");
+  fMean=safe(fMean,getFallback("fMean"));
+  fVar=safe(fVar,getFallback("fVar"));
+  const fStd=safe(Math.sqrt(Math.max(0,fVar)), getFallback("fStd"));
+  const hollow=(isFinite(fMean)&&fMean>0)?(fStd/fMean):getFallback("hollow");
 
   const env=frames.map(fr=>{let s=0; for(let i=0;i<fr.time.length;i++) s+=fr.time[i]*fr.time[i]; return Math.sqrt(s/fr.time.length);});
   const smoothEnv=movingAverage(env,3), maxEnv=Math.max(...smoothEnv), start=Math.max(0,smoothEnv.indexOf(maxEnv));
   const decay=smoothEnv.slice(start), dtFrame=1/60, xs=[], ys=[];
   for(let i=0;i<decay.length;i++){ if(decay[i]>maxEnv*0.10){ xs.push(i*dtFrame); ys.push(Math.log(decay[i])); } }
 
-  let tau=NaN;
+  let tau=getFallback("tau");
   if(xs.length>=4){
     const n=xs.length; let sx=0,sy=0,sxx=0,sxy=0;
     for(let i=0;i<n;i++){sx+=xs[i]; sy+=ys[i]; sxx+=xs[i]*xs[i]; sxy+=xs[i]*ys[i];}
     const denom=n*sxx-sx*sx;
-    if(denom!==0){ const slope=(n*sxy-sx*sy)/denom; if(slope<0) tau=-1/slope; }
+    if(denom!==0){
+      const slope=(n*sxy-sx*sy)/denom;
+      if(slope<0 && isFinite(-1/slope)) tau=-1/slope;
+    }
   }
-  return {fPeak,Q,tau,fMean,fStd,fVar,hollow,bw};
+
+  const quality = assessSignalQuality({Q, bw, fPeak, fMean, fStd, tau, magSum});
+  return {fPeak,Q,tau,fMean,fStd,fVar,hollow,bw,quality};
 }
 
-function confidenceScore(features){
-  const qVals=features.map(t=>t.Q).filter(v=>isFinite(v));
-  if(qVals.length<2) return 45;
-  const qSpread=Math.max(...qVals)-Math.min(...qVals);
-  return clamp(94 - qSpread*1.5, 50, 97);
+function assessSignalQuality(feat){
+  let score = 100;
+  if(!isFinite(feat.Q) || feat.Q <= 0) score -= 35;
+  if(!isFinite(feat.bw) || feat.bw < 3 || feat.bw > 200) score -= 20;
+  if(!isFinite(feat.tau) || feat.tau <= 0) score -= 20;
+  if(!isFinite(feat.fPeak) || feat.fPeak < 60 || feat.fPeak > 850) score -= 15;
+  if(!isFinite(feat.magSum) || feat.magSum < 0.001) score -= 20;
+  score = clamp(score, 0, 100);
+  if(score >= 75) return {score, label:"สัญญาณดี", cls:"good"};
+  if(score >= 50) return {score, label:"สัญญาณปานกลาง", cls:"mid"};
+  return {score, label:"สัญญาณอ่อน", cls:"bad"};
 }
+
+function setSignalQuality(label, cls){
+  const el = document.getElementById("signalBadge");
+  el.innerText = `คุณภาพสัญญาณ: ${label}`;
+  el.className = `sig sig-${cls}`;
+}
+
 function updateWatermelonColor(fleshColor){
   const melon = document.getElementById("watermelon");
   melon.style.background = `radial-gradient(circle at center, ${fleshColor} 70%, #2e7d32 30%)`;
@@ -268,12 +306,18 @@ function analyzeSession(){
   const avg={};
   ['fPeak','Q','tau','fMean','fStd','fVar','hollow','bw'].forEach(k=>{
     const vals=tapFeatures.map(t=>t[k]).filter(v=>isFinite(v));
-    avg[k]=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:NaN;
+    avg[k]=vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : getFallback(k);
   });
 
+  const qScores = tapFeatures.map(t => t.quality ? t.quality.score : 50);
+  const sigScore = qScores.length ? qScores.reduce((a,b)=>a+b,0)/qScores.length : 50;
+  const sigLabel = sigScore >= 75 ? "สัญญาณดี" : sigScore >= 50 ? "สัญญาณปานกลาง" : "สัญญาณอ่อน";
+  const sigCls = sigScore >= 75 ? "good" : sigScore >= 50 ? "mid" : "bad";
+  setSignalQuality(sigLabel, sigCls);
+
   let group=classifyPre(avg.Q);
-  const Qcal=CAL.Q.a + CAL.Q.b*avg.Q;
-  const tauCal=CAL.tau.a + CAL.tau.b*(isFinite(avg.tau)?avg.tau:0.08);
+  const Qcal=safe(CAL.Q.a + CAL.Q.b*safe(avg.Q,getFallback("Q")), 210);
+  const tauCal=safe(CAL.tau.a + CAL.tau.b*safe(avg.tau,getFallback("tau")), 0.08);
   group=classifyPost(Qcal);
 
   const ripe=ripenessFromGroup(group);
@@ -281,7 +325,7 @@ function analyzeSession(){
   const firmness=firmnessProxy(Qcal, avg.fVar);
   const juice=juiceProxy(tauCal, Qcal);
   const hProb=hollowProbability(avg.hollow);
-  const conf=confidenceScore(tapFeatures);
+  const conf=clamp((confidenceScore(tapFeatures)+sigScore)/2, 45, 97);
 
   const sweetStars = toStars(brix, 4.5, 14);
   const firmStars = toStars(firmness, 0, 20);
@@ -289,28 +333,21 @@ function analyzeSession(){
   const hollowStars = 5 - toStars(hProb, 0, 1);
   const confStars = toStars(conf, 50, 100);
 
-  // weighted final score: sweet 30, firm 20, juice 15, non-hollow 20, confidence 15
   const melonScore = Math.round(
-    0.30 * (brix / 14 * 100) +
-    0.20 * (firmness / 20 * 100) +
-    0.15 * juice +
-    0.20 * ((1 - hProb) * 100) +
-    0.15 * conf
+    0.30 * (safe(brix,7) / 14 * 100) +
+    0.20 * (safe(firmness,8) / 20 * 100) +
+    0.15 * safe(juice,55) +
+    0.20 * ((1 - safe(hProb,0.35)) * 100) +
+    0.15 * safe(conf,65)
   );
 
   let buyText = "", buyClass = "", scoreExplain = "";
   if (melonScore >= 80 && hProb < 0.35 && (group === "C" || group === "D")) {
-    buyText = "แนะนำให้ซื้อ";
-    buyClass = "buy";
-    scoreExplain = "คะแนนรวมดีมาก ความเสี่ยงโพรงต่ำ เหมาะซื้อ";
+    buyText = "แนะนำให้ซื้อ"; buyClass = "buy"; scoreExplain = "คะแนนรวมดีมาก ความเสี่ยงโพรงต่ำ เหมาะซื้อ";
   } else if (melonScore >= 60 && hProb < 0.65) {
-    buyText = "พอซื้อได้";
-    buyClass = "maybe";
-    scoreExplain = "คุณภาพพอใช้ แนะนำดูราคาและสภาพภายนอกเพิ่ม";
+    buyText = "พอซื้อได้"; buyClass = "maybe"; scoreExplain = "คุณภาพพอใช้ แนะนำดูราคาและสภาพภายนอกเพิ่ม";
   } else {
-    buyText = "ไม่แนะนำซื้อ";
-    buyClass = "no";
-    scoreExplain = "คะแนนรวมต่ำ หรือมีความเสี่ยงโพรง/สุกเกิน";
+    buyText = "ไม่แนะนำซื้อ"; buyClass = "no"; scoreExplain = "คะแนนรวมต่ำ หรือมีความเสี่ยงโพรง/สุกเกิน";
   }
 
   updateWatermelonColor(ripe.flesh);
@@ -318,13 +355,13 @@ function analyzeSession(){
   const result=document.getElementById("result");
   result.style.backgroundColor=ripe.color;
   result.innerHTML = `
-    ความถี่หลักเฉลี่ย: ${avg.fPeak.toFixed(1)} Hz<br>
+    ความถี่หลักเฉลี่ย: ${safe(avg.fPeak,getFallback("fPeak")).toFixed(1)} Hz<br>
     ระดับความสุก: ${ripe.label} (${ripe.detail})<br>
-    ความหวาน: ${renderStars(sweetStars)} (${brix.toFixed(1)} °Bx)<br>
+    ความหวาน: ${renderStars(sweetStars)} (${safe(brix,7).toFixed(1)} °Bx)<br>
     ความกรอบ: ${renderStars(firmStars)}<br>
     ความฉ่ำ: ${renderStars(juiceStars)}<br>
     โพรงภายใน: ${renderStars(hollowStars)}<br>
-    ความเชื่อมั่น: ${renderStars(confStars)} (${conf.toFixed(0)}%)
+    ความเชื่อมั่น: ${renderStars(confStars)} (${safe(conf,65).toFixed(0)}%)
   `;
 
   document.getElementById("melonScore").innerText = `${melonScore}/100`;
@@ -335,50 +372,58 @@ function analyzeSession(){
 
   document.getElementById("ripenessVal").innerText=`${ripe.label}`;
   document.getElementById("amiVal").innerText=`AMI: ${ripe.ami.toFixed(0)} (${ripe.detail})`;
-  document.getElementById("brixVal").innerText=`${brix.toFixed(1)} °Bx`;
+  document.getElementById("brixVal").innerText=`${safe(brix,7).toFixed(1)} °Bx`;
   document.getElementById("sweetnessText").innerText=`${sweetnessLabel(brix)} • ${renderStars(sweetStars)}`;
-  document.getElementById("firmVal").innerText=firmness.toFixed(1);
+  document.getElementById("firmVal").innerText=safe(firmness,8).toFixed(1);
   document.getElementById("firmText").innerText=`${firmness>=12?"กรอบดี":firmness>=7?"กรอบปานกลาง":"กรอบน้อย"} • ${renderStars(firmStars)}`;
-  document.getElementById("juiceVal").innerText=`${juice.toFixed(0)} %`;
+  document.getElementById("juiceVal").innerText=`${safe(juice,55).toFixed(0)} %`;
   document.getElementById("juiceText").innerText=`${juice>=70?"ฉ่ำมาก":juice>=55?"ฉ่ำปานกลาง":"ฉ่ำน้อย"} • ${renderStars(juiceStars)}`;
-  document.getElementById("hollowVal").innerText=`${(hProb*100).toFixed(0)} %`;
+  document.getElementById("hollowVal").innerText=`${(safe(hProb,0.35)*100).toFixed(0)} %`;
   document.getElementById("hollowText").innerText=`${hProb>0.7?"มีโพรง":hProb>0.3?"เสี่ยงโพรง":"ปกติ"} • ${renderStars(hollowStars)}`;
-  document.getElementById("confVal").innerText=`${conf.toFixed(0)} %`;
+  document.getElementById("confVal").innerText=`${safe(conf,65).toFixed(0)} %`;
   document.getElementById("groupVal").innerText=`ช่วงสุก: ${group} • ${renderStars(confStars)}`;
 
-  setBar("brixBar", (brix/14)*100);
-  setBar("firmBar", (firmness/20)*100);
-  setBar("juiceBar", juice);
-  setBar("hollowBar", (1-hProb)*100);
-  setBar("confBar", conf);
+  setBar("brixBar", (safe(brix,7)/14)*100);
+  setBar("firmBar", (safe(firmness,8)/20)*100);
+  setBar("juiceBar", safe(juice,55));
+  setBar("hollowBar", (1-safe(hProb,0.35))*100);
+  setBar("confBar", safe(conf,65));
 
   document.getElementById("featureList").innerHTML = `
-    <li>Q_phone เฉลี่ย: ${avg.Q.toFixed(2)}</li>
-    <li>Q_calibrated: ${Qcal.toFixed(2)}</li>
-    <li>tau_phone เฉลี่ย: ${isFinite(avg.tau)?avg.tau.toFixed(3):"-"}</li>
-    <li>tau_calibrated: ${isFinite(tauCal)?tauCal.toFixed(3):"-"}</li>
-    <li>f_mean: ${avg.fMean.toFixed(1)} Hz</li>
-    <li>f_std: ${avg.fStd.toFixed(1)} Hz</li>
-    <li>f_variance: ${avg.fVar.toFixed(1)}</li>
-    <li>hollow proxy: ${avg.hollow.toFixed(3)}</li>
-    <li>bandwidth (-3 dB): ${isFinite(avg.bw)?avg.bw.toFixed(2):"-"}</li>
+    <li>Q_phone เฉลี่ย: ${safe(avg.Q,getFallback("Q")).toFixed(2)}</li>
+    <li>Q_calibrated: ${safe(Qcal,210).toFixed(2)}</li>
+    <li>tau_phone เฉลี่ย: ${safe(avg.tau,getFallback("tau")).toFixed(3)}</li>
+    <li>tau_calibrated: ${safe(tauCal,0.08).toFixed(3)}</li>
+    <li>f_mean: ${safe(avg.fMean,getFallback("fMean")).toFixed(1)} Hz</li>
+    <li>f_std: ${safe(avg.fStd,getFallback("fStd")).toFixed(1)} Hz</li>
+    <li>f_variance: ${safe(avg.fVar,getFallback("fVar")).toFixed(1)}</li>
+    <li>hollow proxy: ${safe(avg.hollow,getFallback("hollow")).toFixed(3)}</li>
+    <li>bandwidth (-3 dB): ${safe(avg.bw,getFallback("bw")).toFixed(2)}</li>
+    <li>คุณภาพสัญญาณ: ${sigLabel} (${sigScore.toFixed(0)}%)</li>
     <li>Melon Score: ${melonScore}/100</li>`;
 
-  const msg = new SpeechSynthesisUtterance(`${buyText} แตงโมระดับ ${ripe.label} ความหวานประมาณ ${brix.toFixed(1)} บริกซ์ คะแนนรวม ${melonScore} จาก 100`);
+  const msg = new SpeechSynthesisUtterance(`${buyText} แตงโมระดับ ${ripe.label} ความหวานประมาณ ${safe(brix,7).toFixed(1)} บริกซ์ คะแนนรวม ${melonScore} จาก 100`);
   speechSynthesis.cancel(); speechSynthesis.speak(msg);
 
   const history=JSON.parse(localStorage.getItem("history")||"[]");
-  history.unshift({time:new Date().toLocaleString(),fPeak:avg.fPeak,Q:Qcal,level:ripe.label,brix:brix,conf:conf,score:melonScore,buy:buyText});
+  history.unshift({time:new Date().toLocaleString(),level:ripe.label,brix:safe(brix,7),conf:safe(conf,65),score:melonScore,buy:buyText,sig:sigScore});
   localStorage.setItem("history", JSON.stringify(history.slice(0,8)));
   updateHistory();
   setStatus("ตรวจวัดเสร็จแล้ว");
+}
+
+function confidenceScore(features){
+  const qVals=features.map(t=>safe(t.Q, getFallback("Q"))).filter(v=>isFinite(v));
+  if(qVals.length<2) return 45;
+  const qSpread=Math.max(...qVals)-Math.min(...qVals);
+  return clamp(94 - qSpread*1.5, 50, 97);
 }
 
 function updateTapProgress(){document.getElementById("tapProgress").innerText=`${tapFeatures.length}/${NUM_TAPS}`;}
 function updateHistory(){
   const historyList=document.getElementById("history");
   const history=JSON.parse(localStorage.getItem("history")||"[]");
-  historyList.innerHTML=history.map(item=>`<li>${item.time}: ${item.level} | ${item.brix.toFixed(1)} °Bx | Score ${item.score}/100 | ${item.buy}</li>`).join("");
+  historyList.innerHTML=history.map(item=>`<li>${item.time}: ${item.level} | ${safe(item.brix,7).toFixed(1)} °Bx | Score ${item.score}/100 | ${item.buy} | สัญญาณ ${safe(item.sig,60).toFixed(0)}%</li>`).join("");
 }
 function resetAll(){
   listening=false; if(rafId) cancelAnimationFrame(rafId);
@@ -401,10 +446,11 @@ function resetAll(){
   document.getElementById("scoreExplain").innerText = "ยังไม่มีการประเมิน";
   ["brixBar","firmBar","juiceBar","hollowBar","confBar"].forEach(id=>setBar(id,0));
   updateWatermelonColor("#ff5252");
+  setSignalQuality("รอวัด", "mid");
   document.getElementById("startBtn").disabled=false;
 }
 function shareResult(){
-  const text = document.getElementById("result").innerText + "\nMelon Score: " + document.getElementById("melonScore").innerText + "\nคำแนะนำ: " + document.getElementById("buyBadge").innerText;
+  const text = document.getElementById("result").innerText + "\nMelon Score: " + document.getElementById("melonScore").innerText + "\nคำแนะนำ: " + document.getElementById("buyBadge").innerText + "\n" + document.getElementById("signalBadge").innerText;
   if(navigator.share) navigator.share({title:"ผลวัดแตงโม", text});
   else alert("อุปกรณ์นี้ไม่รองรับการแชร์");
 }
