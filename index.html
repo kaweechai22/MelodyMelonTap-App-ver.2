@@ -55,7 +55,7 @@
       <button class="secondary" onclick="shareResult()">แชร์ผลลัพธ์</button>
     </div>
     <p id="status">สถานะ: พร้อมเริ่มวัด</p>
-    <div class="small">วิเคราะห์ช่วง <span class="mono">50–900 Hz</span> | จำนวนครั้ง <span id="tapProgress">0/3</span></div>
+    <div class="small">วิเคราะห์ช่วง <span class="mono">100–1000 Hz</span> | จำนวนครั้ง <span id="tapProgress">0/3</span></div>
     <div id="signalBadge" class="sig sig-mid">คุณภาพสัญญาณ: รอวัด</div>
   </div>
 
@@ -128,7 +128,7 @@ function renderStars(n){ n = clamp(Math.round(safe(n,0)),0,5); return "⭐".repe
 // เกณฑ์อ้างอิงจากข้อมูลจริง A1-E11 ที่วัดไว้
 function sweetnessLabel(brix){
   if (brix < 8.0) return "หวานน้อย";
-  if (brix < 10.8) return "หวานอ่อน";
+  if (brix < 10.8) return "หวาน";
   if (brix < 12.0) return "หวานดี";
   return "หวานจัด";
 }
