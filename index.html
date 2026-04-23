@@ -55,7 +55,7 @@
       <button class="secondary" onclick="shareResult()">แชร์ผลลัพธ์</button>
     </div>
     <p id="status">สถานะ: พร้อมเริ่มวัด</p>
-    <div class="small">วิเคราะห์ช่วง <span class="mono">100–1000 Hz</span> | จำนวนครั้ง <span id="tapProgress">0/3</span></div>
+    <div class="small">วิเคราะห์ช่วง <span class="mono">50–900 Hz</span> | จำนวนครั้ง <span id="tapProgress">0/3</span></div>
     <div id="signalBadge" class="sig sig-mid">คุณภาพสัญญาณ: รอวัด</div>
   </div>
 
@@ -125,21 +125,15 @@ function movingAverage(arr,win=3){
 function getRMS(samples){let s=0; for(let i=0;i<samples.length;i++) s+=samples[i]*samples[i]; return Math.sqrt(s/samples.length);}
 function toStars(value,min,max){ let score=(safe(value,min)-min)/(max-min); score=clamp(score,0,1); return Math.round(score*5); }
 function renderStars(n){ n = clamp(Math.round(safe(n,0)),0,5); return "⭐".repeat(n) + "☆".repeat(5-n); }
-// เกณฑ์อ้างอิงจากข้อมูลจริง A1-E11 ที่วัดไว้
-function sweetnessLabel(brix){
-  if (brix < 8.0) return "หวานน้อย";
-  if (brix < 10.8) return "หวาน";
-  if (brix < 12.0) return "หวานดี";
-  return "หวานจัด";
-}
+function sweetnessLabel(brix){if(brix<9)return "หวานน้อย"; if(brix<10.5)return "หวานปานกลาง"; if(brix<12)return "หวาน"; return "หวานมาก";}
 function firmnessLabel(firmness){
-  if (firmness < 18) return "เนื้อค่อนข้างนิ่ม";
-  if (firmness < 30) return "เนื้อแน่นพอดี";
-  return "เนื้อแน่นกรอบ";
+  if (firmness < 9) return "กรอบน้อย";
+  if (firmness < 15) return "กรอบปานกลาง";
+  return "กรอบมาก";
 }
 function juiceLabel(juice){
-  if (juice < 50) return "ฉ่ำน้อย";
-  if (juice < 63) return "ฉ่ำกำลังดี";
+  if (juice < 62) return "ฉ่ำน้อย";
+  if (juice < 74) return "ฉ่ำปานกลาง";
   return "ฉ่ำมาก";
 }
 
@@ -431,12 +425,12 @@ function analyzeSession(){
   const melonScore = Math.round(clamp(score, 0, 100));
 
   let buyText = "", buyClass = "", scoreExplain = "";
-  if (melonScore >= 78 && hollowPercent < 10 && (group === "C" || group === "D")) {
-    buyText = "น่าซื้อ"; buyClass = "buy"; scoreExplain = "คุณภาพโดยรวมดีมาก เหมาะเลือกซื้อ";
-  } else if (melonScore >= 58 && hollowPercent < 20 && group !== "A") {
-    buyText = "พิจารณาได้"; buyClass = "maybe"; scoreExplain = "คุณภาพพอใช้ ควรดูสภาพภายนอกประกอบ";
+  if (melonScore >= 80 && hollowPercent < 10 && (group === "C" || group === "D")) {
+    buyText = "แนะนำให้ซื้อ"; buyClass = "buy"; scoreExplain = "คะแนนรวมดีมาก โครงสร้างดี เหมาะซื้อ";
+  } else if (melonScore >= 60 && hollowPercent < 20 && group !== "A") {
+    buyText = "พอซื้อได้"; buyClass = "maybe"; scoreExplain = "คุณภาพพอใช้ แนะนำดูราคาและสภาพภายนอกเพิ่ม";
   } else {
-    buyText = "ไม่ค่อยแนะนำ"; buyClass = "no"; scoreExplain = "ความเสี่ยงด้านคุณภาพค่อนข้างสูง";
+    buyText = "ไม่แนะนำซื้อ"; buyClass = "no"; scoreExplain = "คะแนนรวมต่ำ หรือมีความเสี่ยงโพรง/สุกเกิน";
   }
 
   updateWatermelonColor(ripe.flesh);
