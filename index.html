@@ -42,7 +42,16 @@
     .sig-good{background:#dcedc8;color:#1b5e20}
     .sig-mid{background:#fff3cd;color:#8a6d3b}
     .sig-bad{background:#ffcdd2;color:#b71c1c}
-  </style>
+  
+/* v14 stable: no visual overlay, clickable UI first */
+button, .btn, input, select, textarea, a {
+  pointer-events: auto !important;
+}
+body, main, .container, .card, .panel {
+  pointer-events: auto !important;
+}
+
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -51,7 +60,7 @@
 🎙 AI Voice Assistant พร้อมอ่านสรุปผลอัตโนมัติ | เสียงอ่าน: พอดีกิน
 </div>
 
-  <div style="text-align:center;font-size:.95rem;color:#60707a;margin-top:-.4rem;margin-bottom:.8rem;">Version: v2026.05.12-quality-ai-v12</div>
+  <div style="text-align:center;font-size:.95rem;color:#60707a;margin-top:-.4rem;margin-bottom:.8rem;">Version: v2026.05.12-stable-no-effect-v14</div>
   <div class="card">
     <div id="watermelon" class="watermelon"></div>
     <div class="controls">
