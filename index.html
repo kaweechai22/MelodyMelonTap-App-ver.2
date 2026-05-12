@@ -44,7 +44,7 @@
     .sig-bad{background:#ffcdd2;color:#b71c1c}
   
     .watermelon{position:relative;overflow:hidden}
-    .hollow-overlay{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .4s ease;pointer-events:none!important;z-index:0!important;touch-action:none;user-select:none;-webkit-user-select:none;}
+    .hollow-overlay{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .4s ease;pointer-events:none!important;z-index:0!important;;user-select:none;-webkit-user-select:none;}
     .hollow-overlay.show{opacity:1}
     .hollow-crack{position:absolute;background:rgba(80,0,0,.55);border-radius:999px;transform-origin:center;box-shadow:0 0 6px rgba(60,0,0,.25)}
     .hollow-hole{position:absolute;background:rgba(55,0,0,.65);border-radius:50%;box-shadow:inset 0 0 8px rgba(0,0,0,.45),0 0 4px rgba(60,0,0,.22)}
@@ -53,7 +53,7 @@
     /* v13.1 touch fix: hollow visual must never block buttons/touch */
     #watermelon{
       position:relative;
-      isolation:isolate;
+      ;
       pointer-events:auto;
     }
     #hollowOverlay{
@@ -63,7 +63,7 @@
       z-index:0 !important;
       user-select:none;
       -webkit-user-select:none;
-      touch-action:none;
+      ;
       transform:translateZ(0);
     }
     #hollowOverlay *{
@@ -81,7 +81,30 @@
       z-index:10;
     }
 
-  </style>
+  
+/* SAFE HOLLOW VISUAL v13.2 */
+#watermelon{
+  position:relative;
+}
+#hollowOverlay{
+  position:absolute;
+  inset:18%;
+  pointer-events:none !important;
+  z-index:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  opacity:.9;
+}
+.hollow-mark{
+  color:rgba(80,0,0,.45);
+  font-size:72px;
+  font-weight:bold;
+  line-height:1;
+  user-select:none;
+}
+
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -90,7 +113,7 @@
 🎙 AI Voice Assistant พร้อมอ่านสรุปผลอัตโนมัติ | เสียงอ่าน: พอดีกิน
 </div>
 
-  <div style="text-align:center;font-size:.95rem;color:#60707a;margin-top:-.4rem;margin-bottom:.8rem;">Version: v2026.05.12-hollow-visual-v13.1-touchfix</div>
+  <div style="text-align:center;font-size:.95rem;color:#60707a;margin-top:-.4rem;margin-bottom:.8rem;">Version: v2026.05.12-safe-hollow-v13.2</div>
   <div class="card">
     <div id="watermelon" class="watermelon"><div id="hollowOverlay" class="hollow-overlay" aria-hidden="true"></div></div>
     <div class="controls">
@@ -442,59 +465,32 @@ function setSignalQuality(label, cls){
   el.className = `sig sig-${cls}`;
 }
 
+
 function updateHollowVisual(hollowPercent){
   const overlay = document.getElementById("hollowOverlay");
   if(!overlay) return;
-  overlay.innerHTML = "";
 
-  if(!Number.isFinite(hollowPercent) || hollowPercent < 8){
-    overlay.className = "hollow-overlay";
+  overlay.innerHTML = "";
+  overlay.style.pointerEvents = "none";
+
+  if(hollowPercent < 12){
     return;
   }
 
-  overlay.className = "hollow-overlay show";
+  const mark = document.createElement("div");
+  mark.className = "hollow-mark";
 
-  let level = 1;
-  if(hollowPercent >= 15) level = 2;
-  if(hollowPercent >= 25) level = 3;
+  if(hollowPercent < 20){
+    mark.textContent = "◔";
+  }else if(hollowPercent < 35){
+    mark.textContent = "◑";
+  }else{
+    mark.textContent = "✦";
+  }
 
-  const cracks = [
-    {left:48, top:27, w:7, h:62, rot:0},
-    {left:31, top:43, w:7, h:50, rot:55},
-    {left:62, top:43, w:7, h:50, rot:-55},
-    {left:46, top:53, w:7, h:42, rot:90},
-    {left:50, top:38, w:6, h:36, rot:25},
-  ];
-
-  const holes = [
-    {left:44, top:45, s:22},
-    {left:36, top:56, s:13},
-    {left:57, top:57, s:12},
-    {left:47, top:35, s:10},
-  ];
-
-  cracks.slice(0, level + 2).forEach(c=>{
-    const d = document.createElement("div");
-    d.className = "hollow-crack";
-    d.style.left = c.left + "%";
-    d.style.top = c.top + "%";
-    d.style.width = c.w + "px";
-    d.style.height = c.h + "px";
-    d.style.transform = `translate(-50%,-50%) rotate(${c.rot}deg)`;
-    overlay.appendChild(d);
-  });
-
-  holes.slice(0, level + 1).forEach(h=>{
-    const d = document.createElement("div");
-    d.className = "hollow-hole";
-    d.style.left = h.left + "%";
-    d.style.top = h.top + "%";
-    d.style.width = h.s + "px";
-    d.style.height = h.s + "px";
-    d.style.transform = "translate(-50%,-50%)";
-    overlay.appendChild(d);
-  });
+  overlay.appendChild(mark);
 }
+
 
 
 function forceHollowOverlayNoTouch(){
