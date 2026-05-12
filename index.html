@@ -60,7 +60,7 @@ body, main, .container, .card, .panel {
 🎙 AI Voice Assistant พร้อมอ่านสรุปผลอัตโนมัติ | เสียงอ่าน: พอดีกิน
 </div>
 
-  <div style="text-align:center;font-size:.95rem;color:#60707a;margin-top:-.4rem;margin-bottom:.8rem;">Version: v2026.05.12-final-voice-v16.1</div>
+  <div style="text-align:center;font-size:.95rem;color:#60707a;margin-top:-.4rem;margin-bottom:.8rem;">Version: v2026.05.12-natural-ai-voice-v18</div>
   <div class="card">
     <div id="watermelon" class="watermelon"></div>
     <div class="controls">
@@ -528,6 +528,34 @@ function perfectRipeLabel(score){
 
 
 
+
+// ===== Unified Display + Voice Labels v17 =====
+function crispPercent(firmness){
+  const minF = 5;
+  const maxF = 20;
+  return clamp(((firmness - minF) / (maxF - minF)) * 100, 0, 100);
+}
+function crispLabel(percent){
+  if(percent < 20) return "เนื้อนิ่มมาก";
+  if(percent < 40) return "เนื้อค่อนข้างนิ่ม";
+  if(percent < 60) return "เนื้อปานกลาง";
+  if(percent < 80) return "เนื้อแน่นกำลังดี";
+  return "เนื้อแน่นกรอบ";
+}
+function hollowDisplayLabel(h){
+  if(h < 5) return "เนื้อภายในค่อนข้างสมบูรณ์";
+  if(h < 12) return "ไม่พบโพรงภายใน";
+  if(h < 20) return "เริ่มมีโพรงภายในเล็กน้อย";
+  if(h < 35) return "มีโพรงภายใน";
+  return "มีโพรงภายในค่อนข้างมาก";
+}
+function qualityLevelText(score){
+  if(score >= 85) return "คาดว่าเป็นแตงโมที่มีคุณภาพดีเยี่ยม";
+  if(score >= 70) return "คาดว่าเป็นแตงโมที่มีคุณภาพดี";
+  if(score >= 50) return "คาดว่าเป็นแตงโมที่มีคุณภาพปานกลาง";
+  return "คาดว่าเป็นแตงโมที่มีคุณภาพไม่ดี";
+}
+
 function analyzeSession(){
   const avg={};
   ['fPeak','Q','tau','fMean','fStd','fVar','hollow','bw','highRatio','lowRatio','flatness'].forEach(k=>{
@@ -574,7 +602,10 @@ function analyzeSession(){
 
   const ripenessAI = scoreRipenessAI(Quse, tauUsed, brix, firmness, juice, hollowPercent, fMeanUse, fStdUse, fVarUse);
   group = ripenessAI.group;
-  const hollowText = hollowLabel(hollowPercent);
+  const hollowText = hollowDisplayLabel(hollowPercent);
+  const crispPct = crispPercent(firmness);
+  const crispText = crispLabel(crispPct);
+  const qualityText = qualityLevelText(melonScore);
 
   // confidence should not be high for bad fruits / fallback tau / high hollow
   const qVals = tapFeatures.map(t=>safe(t.Q, getFallback("Q")));
@@ -618,11 +649,11 @@ function analyzeSession(){
 
   let buyText = "", buyClass = "", scoreExplain = "";
   if (melonScore >= 80 && hollowPercent < 10 && (group === "C" || group === "D")) {
-    buyText = "แนะนำให้ซื้อ"; buyClass = "buy"; scoreExplain = "คะแนนรวมดีมาก โครงสร้างดี เหมาะซื้อ";
+    buyText = "น่าซื้อ"; buyClass = "buy"; scoreExplain = "คุณภาพโดยรวมดี เหมาะเลือกซื้อ";
   } else if (melonScore >= 60 && hollowPercent < 20 && group !== "A") {
-    buyText = "พอซื้อได้"; buyClass = "maybe"; scoreExplain = "คุณภาพพอใช้ แนะนำดูราคาและสภาพภายนอกเพิ่ม";
+    buyText = "พิจารณาได้"; buyClass = "maybe"; scoreExplain = "คุณภาพพอใช้ ควรดูสภาพภายนอกประกอบ";
   } else {
-    buyText = "ไม่แนะนำซื้อ"; buyClass = "no"; scoreExplain = "คะแนนรวมต่ำ หรือมีความเสี่ยงโพรง/สุกเกิน";
+    buyText = "ไม่ค่อยแนะนำ"; buyClass = "no"; scoreExplain = "ความเสี่ยงด้านคุณภาพค่อนข้างสูง";
   }
 
   updateWatermelonColor(ripe.flesh);
@@ -633,9 +664,9 @@ function analyzeSession(){
     ความถี่หลักเฉลี่ย: ${safe(avg.fPeak,getFallback("fPeak")).toFixed(1)} Hz<br>
     ระดับความสุก: ${ripe.label} (${ripe.detail})<br>
     ความหวาน: ${renderStars(sweetStars)} (${safe(brix,9).toFixed(1)} °Bx)<br>
-    ความกรอบ: ${renderStars(firmStars)} (${safe(firmness,8).toFixed(1)} - ${firmnessLabel(firmness)})<br>
+    ความกรอบ: ${renderStars(firmStars)} (${crispPct.toFixed(0)}% - ${crispText})<br>
     ความฉ่ำ: ${renderStars(juiceStars)} (${safe(juice,60).toFixed(0)}% - ${juiceLabel(juice)})<br>
-    โพรงภายใน: ${renderStars(hollowStars)} (${hollowPercent.toFixed(1)}% - ${hollowLabel(hollowPercent)})<br>
+    โพรงภายใน: ${renderStars(hollowStars)} (${hollowPercent.toFixed(1)}% - ${hollowText})<br>
     ความเชื่อมั่น: ${renderStars(confStars)} (${safe(conf,55).toFixed(0)}%)
   `;
 
@@ -649,12 +680,12 @@ function analyzeSession(){
   document.getElementById("amiVal").innerText=`AMI: ${ripe.ami.toFixed(0)} (${ripe.detail})`;
   document.getElementById("brixVal").innerText=`${safe(brix,9).toFixed(1)} °Bx`;
   document.getElementById("sweetnessText").innerText=`${sweetnessLabel(brix)} • ${renderStars(sweetStars)}`;
-  document.getElementById("firmVal").innerText=safe(firmness,8).toFixed(1);
-  document.getElementById("firmText").innerText=`${firmnessLabel(firmness)} • ${renderStars(firmStars)}`;
+  document.getElementById("firmVal").innerText=`${crispPct.toFixed(0)} %`;
+  document.getElementById("firmText").innerText=`${crispText} • ${renderStars(firmStars)}`;
   document.getElementById("juiceVal").innerText=`${safe(juice,60).toFixed(0)} %`;
   document.getElementById("juiceText").innerText=`${juiceLabel(juice)} • ${renderStars(juiceStars)}`;
   document.getElementById("hollowVal").innerText=`${hollowPercent.toFixed(1)} %`;
-  document.getElementById("hollowText").innerText=`${hollowLabel(hollowPercent)} • ${renderStars(hollowStars)}`;
+  document.getElementById("hollowText").innerText=`${hollowText} • ${renderStars(hollowStars)}`;
   document.getElementById("confVal").innerText=`${safe(conf,55).toFixed(0)} %`;
   document.getElementById("groupVal").innerText=`ช่วงสุก: ${group} • ${renderStars(confStars)}`;
 
@@ -672,6 +703,8 @@ function analyzeSession(){
     <li>f_std: ${fStdUse.toFixed(1)} Hz</li>
     <li>f_variance: ${fVarUse.toFixed(1)}</li>
     <li>hollow_index: ${hollowIndexUse.toFixed(3)}</li>
+    <li>Firmness raw: ${safe(firmness,8).toFixed(1)} N</li>
+    <li>ความกรอบแสดงผล: ${crispPct.toFixed(0)}% (${crispText})</li>
     <li>Hollow predicted: ${hollowPercent.toFixed(1)}%</li>
     <li>Ripeness scores: ${ripenessScoreExplain(ripenessAI)}</li>
     <li>Perfect ripe meter: ${ripeMeter.toFixed(0)}/100</li><li>Distance to sweet spot: ${ripeDistance.toFixed(2)}</li><li>Ripeness confidence: ${ripenessAI.confidence.toFixed(0)}%</li>
@@ -687,7 +720,21 @@ function analyzeSession(){
   localStorage.setItem("history", JSON.stringify(history.slice(0,8)));
   updateHistory();
   
-  speakSummaryAI(group, brix, firmness, juice, hollowPercent, buyText, conf, ripeMeter);
+  
+const voiceSummary = {
+    ripenessText: group === "C" || group === "B" ? "แตงโมลูกนี้อยู่ในช่วงพอดีกิน" :
+                  group === "D" ? "แตงโมลูกนี้ใกล้สุก" :
+                  group === "E" ? "แตงโมลูกนี้ยังค่อนข้างดิบ" :
+                  "แตงโมลูกนี้มีแนวโน้มสุกมาก",
+    sweetnessText: sweetnessLabel(brix),
+    crispText: crispText,
+    juiceText: juiceLabel(juice),
+    hollowText: hollowText,
+    qualityText: qualityText
+  };
+
+  speakSummaryAI(voiceSummary);
+
   setStatus("ตรวจวัดเสร็จแล้ว");
 }
 
@@ -698,43 +745,25 @@ function updateTapProgress(){document.getElementById("tapProgress").innerText=`$
 
 
 // ===== FINAL AI VOICE SUMMARY v16.1 =====
-function speakSummaryAI(group, brix, firmness, juice, hollowPercent, buyText, confidence, ripeMeter){
-  let intro = "";
-  if(group === "C" || group === "B"){
-    intro = "แตงโมลูกนี้อยู่ในช่วงพอดีกิน";
-  }else if(group === "D"){
-    intro = "แตงโมลูกนี้ใกล้สุก";
-  }else if(group === "E"){
-    intro = "แตงโมลูกนี้ยังค่อนข้างดิบ";
-  }else{
-    intro = "แตงโมลูกนี้มีแนวโน้มสุกมาก";
-  }
 
-  const crispPct = crispPercent(firmness);
-  const hollowText = hollowVoiceLabel(hollowPercent);
-  const qualityText = qualityLevelText(ripeMeter);
 
-  let confText = "";
-  if(confidence < 58){
-    confText = "ผลการวัดยังไม่นิ่ง กรุณาเคาะใหม่อีกครั้ง";
-  }else if(confidence < 75){
-    confText = "ผลการวัดมีความเชื่อมั่นระดับปานกลาง";
-  }else{
-    confText = "ผลการวัดมีความเชื่อมั่นสูง";
-  }
 
-  const summary =
-    `${intro} ` +
-    `ความหวานประมาณ ${brix.toFixed(1)} บริกซ์ ` +
-    `ความกรอบประมาณ ${crispPct.toFixed(0)} เปอร์เซ็นต์ ${crispLabel(crispPct)} ` +
-    `${juiceLabel(juice)} ` +
-    `${hollowText} ` +
-    `${qualityText} ` +
-    `${confText}`;
+// ===== Synced AI Voice v17 =====
+// เสียงอ่านใช้ตัวแปรชุดเดียวกับผลลัพธ์หลักบนหน้าแอป
+function speakSummaryAI(summary){
+  
+const text =
+    `${summary.ripenessText} ` +
+    `${summary.sweetnessText} ` +
+    `${summary.crispText} ` +
+    `${summary.juiceText} ` +
+    `${summary.hollowText} ` +
+    `${summary.qualityText}`;
+
 
   try{
     speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(summary);
+    const utter = new SpeechSynthesisUtterance(text);
     utter.lang = "th-TH";
     utter.rate = 0.92;
     utter.pitch = 1.0;
@@ -793,34 +822,13 @@ updateHistory();
 
 
 // ===== Quality UI v12 =====
-function crispPercent(firmness){
-  const minF = 5;
-  const maxF = 20;
-  return clamp(((firmness - minF) / (maxF - minF)) * 100, 0, 100);
-}
 
-function crispLabel(percent){
-  if(percent < 20) return "เนื้อนิ่มมาก";
-  if(percent < 40) return "เนื้อค่อนข้างนิ่ม";
-  if(percent < 60) return "เนื้อปานกลาง";
-  if(percent < 80) return "เนื้อแน่นกำลังดี";
-  return "เนื้อแน่นกรอบ";
-}
 
-function hollowVoiceLabel(h){
-  if(h < 5) return "เนื้อภายในค่อนข้างสมบูรณ์";
-  if(h < 12) return "ไม่พบโพรงภายใน";
-  if(h < 20) return "เริ่มมีโพรงภายในเล็กน้อย";
-  if(h < 35) return "มีโพรงภายใน";
-  return "มีโพรงภายในค่อนข้างมาก";
-}
 
-function qualityLevelText(score){
-  if(score >= 85) return "คาดว่าเป็นแตงโมที่มีคุณภาพดีเยี่ยม";
-  if(score >= 70) return "คาดว่าเป็นแตงโมที่มีคุณภาพดี";
-  if(score >= 50) return "คาดว่าเป็นแตงโมที่มีคุณภาพปานกลาง";
-  return "คาดว่าเป็นแตงโมที่มีคุณภาพไม่ดี";
-}
+
+
+
+
 
 // ===== REAL AI VOICE v11.3 =====
 

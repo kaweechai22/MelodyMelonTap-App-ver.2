@@ -1,4 +1,4 @@
-const CACHE_NAME = "melon-final-voice-v16-1";
+const CACHE_NAME = "melon-natural-ai-voice-v18";
 const urlsToCache = ["./","./index.html","./manifest.json","./icon.png"];
 
 self.addEventListener("install", e => {
