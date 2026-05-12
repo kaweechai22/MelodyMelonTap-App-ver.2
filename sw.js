@@ -1,4 +1,4 @@
-const CACHE_NAME = "melodymelon-v11-2-voicefix";
+const CACHE_NAME = "melon-hollow-visual-v13";
 const urlsToCache = ["./","./index.html","./manifest.json","./icon.png"];
 
 self.addEventListener("install", e => {

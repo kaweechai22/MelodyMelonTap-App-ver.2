@@ -42,6 +42,13 @@
     .sig-good{background:#dcedc8;color:#1b5e20}
     .sig-mid{background:#fff3cd;color:#8a6d3b}
     .sig-bad{background:#ffcdd2;color:#b71c1c}
+  
+    .watermelon{position:relative;overflow:hidden}
+    .hollow-overlay{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .4s ease}
+    .hollow-overlay.show{opacity:1}
+    .hollow-crack{position:absolute;background:rgba(80,0,0,.55);border-radius:999px;transform-origin:center;box-shadow:0 0 6px rgba(60,0,0,.25)}
+    .hollow-hole{position:absolute;background:rgba(55,0,0,.65);border-radius:50%;box-shadow:inset 0 0 8px rgba(0,0,0,.45),0 0 4px rgba(60,0,0,.22)}
+
   </style>
 </head>
 <body>
@@ -51,9 +58,9 @@
 🎙 AI Voice Assistant พร้อมอ่านสรุปผลอัตโนมัติ | เสียงอ่าน: พอดีกิน
 </div>
 
-  <div style="text-align:center;font-size:.95rem;color:#60707a;margin-top:-.4rem;margin-bottom:.8rem;">Version: v2026.05.12-voice-ai-v11.2</div>
+  <div style="text-align:center;font-size:.95rem;color:#60707a;margin-top:-.4rem;margin-bottom:.8rem;">Version: v2026.05.12-hollow-visual-v13</div>
   <div class="card">
-    <div id="watermelon" class="watermelon"></div>
+    <div id="watermelon" class="watermelon"><div id="hollowOverlay" class="hollow-overlay"></div></div>
     <div class="controls">
       <button id="startBtn" onclick="startSession()">เริ่มฟังเสียง</button>
       <button class="secondary" onclick="resetAll()">เริ่มใหม่</button>
@@ -402,6 +409,61 @@ function setSignalQuality(label, cls){
   el.innerText = `คุณภาพสัญญาณ: ${label}`;
   el.className = `sig sig-${cls}`;
 }
+
+function updateHollowVisual(hollowPercent){
+  const overlay = document.getElementById("hollowOverlay");
+  if(!overlay) return;
+  overlay.innerHTML = "";
+
+  if(!Number.isFinite(hollowPercent) || hollowPercent < 8){
+    overlay.className = "hollow-overlay";
+    return;
+  }
+
+  overlay.className = "hollow-overlay show";
+
+  let level = 1;
+  if(hollowPercent >= 15) level = 2;
+  if(hollowPercent >= 25) level = 3;
+
+  const cracks = [
+    {left:48, top:27, w:7, h:62, rot:0},
+    {left:31, top:43, w:7, h:50, rot:55},
+    {left:62, top:43, w:7, h:50, rot:-55},
+    {left:46, top:53, w:7, h:42, rot:90},
+    {left:50, top:38, w:6, h:36, rot:25},
+  ];
+
+  const holes = [
+    {left:44, top:45, s:22},
+    {left:36, top:56, s:13},
+    {left:57, top:57, s:12},
+    {left:47, top:35, s:10},
+  ];
+
+  cracks.slice(0, level + 2).forEach(c=>{
+    const d = document.createElement("div");
+    d.className = "hollow-crack";
+    d.style.left = c.left + "%";
+    d.style.top = c.top + "%";
+    d.style.width = c.w + "px";
+    d.style.height = c.h + "px";
+    d.style.transform = `translate(-50%,-50%) rotate(${c.rot}deg)`;
+    overlay.appendChild(d);
+  });
+
+  holes.slice(0, level + 1).forEach(h=>{
+    const d = document.createElement("div");
+    d.className = "hollow-hole";
+    d.style.left = h.left + "%";
+    d.style.top = h.top + "%";
+    d.style.width = h.s + "px";
+    d.style.height = h.s + "px";
+    d.style.transform = "translate(-50%,-50%)";
+    overlay.appendChild(d);
+  });
+}
+
 function updateWatermelonColor(fleshColor){
   const melon = document.getElementById("watermelon");
   melon.style.background = `radial-gradient(circle at center, ${fleshColor} 70%, #2e7d32 30%)`;
@@ -550,9 +612,7 @@ function buildVoiceSummary(group, brix, firmnessText, juiceText, hollowText, buy
   return `${intro} ${quality} ระดับความสุกประมาณ ${ripeMeter.toFixed(0)} จาก 100 ${buy} ${conf}`;
 }
 
-function speakSummary(text){
-  try{
-    speechSynthesis.cancel();
+function speakSummaryAI(group, brix, firmnessLabel(firmness), juiceLabel(juice), hollowLabel(hollowPercent), buyText, conf, ripeMeter);
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = "th-TH";
     utter.rate = 0.96;
@@ -661,6 +721,7 @@ function analyzeSession(){
   }
 
   updateWatermelonColor(ripe.flesh);
+  updateHollowVisual(hollowPercent);
 
   const result=document.getElementById("result");
   result.style.backgroundColor=ripe.color;
@@ -754,6 +815,7 @@ function resetAll(){
   document.getElementById("scoreExplain").innerText = "ยังไม่มีการประเมิน";
   ["brixBar","firmBar","juiceBar","hollowBar","confBar"].forEach(id=>setBar(id,0));
   updateWatermelonColor("#ff5252");
+  updateHollowVisual(0);
   setSignalQuality("รอวัด", "mid");
   document.getElementById("startBtn").disabled=false;
 }
@@ -765,6 +827,7 @@ function shareResult(){
 function setStatus(msg){document.getElementById("status").innerText=`สถานะ: ${msg}`;}
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}
 updateWatermelonColor("#ff5252");
+updateHollowVisual(0);
 updateHistory();
 
 // ===== Voice wording override v11.2 =====
@@ -801,6 +864,96 @@ function buildVoiceSummary(group, brix, firmnessText, juiceText, hollowText, buy
   }
 
   return `${intro} ${quality} ระดับพอดีกินประมาณ ${ripeMeter.toFixed(0)} จาก 100 ${buy} ${conf}`;
+}
+
+
+
+// ===== Quality UI v12 =====
+function crispPercent(firmness){
+  const minF = 5;
+  const maxF = 20;
+  return clamp(((firmness - minF) / (maxF - minF)) * 100, 0, 100);
+}
+
+function crispLabel(percent){
+  if(percent < 20) return "เนื้อนิ่มมาก";
+  if(percent < 40) return "เนื้อค่อนข้างนิ่ม";
+  if(percent < 60) return "เนื้อปานกลาง";
+  if(percent < 80) return "เนื้อแน่นกำลังดี";
+  return "เนื้อแน่นกรอบ";
+}
+
+function hollowVoiceLabel(h){
+  if(h < 5) return "เนื้อภายในค่อนข้างสมบูรณ์";
+  if(h < 12) return "ไม่พบโพรงภายใน";
+  if(h < 20) return "เริ่มมีโพรงภายในเล็กน้อย";
+  if(h < 35) return "มีโพรงภายใน";
+  return "มีโพรงภายในค่อนข้างมาก";
+}
+
+function qualityLevelText(score){
+  if(score >= 85) return "คาดว่าเป็นแตงโมที่มีคุณภาพดีเยี่ยม";
+  if(score >= 70) return "คาดว่าเป็นแตงโมที่มีคุณภาพดี";
+  if(score >= 50) return "คาดว่าเป็นแตงโมที่มีคุณภาพปานกลาง";
+  return "คาดว่าเป็นแตงโมที่มีคุณภาพไม่ดี";
+}
+
+// ===== REAL AI VOICE v11.3 =====
+function speakSummaryAI(group, brix, firmnessText, juiceText, hollowText, buyText, confidence, ripeMeter){
+  let summary = "";
+
+  if(group === "C" || group === "B"){
+    summary += "แตงโมลูกนี้อยู่ในช่วงพอดีกิน ";
+  }else if(group === "D"){
+    summary += "แตงโมลูกนี้ใกล้สุก ";
+  }else if(group === "E"){
+    summary += "แตงโมลูกนี้ยังค่อนข้างดิบ ";
+  }else{
+    summary += "แตงโมลูกนี้มีแนวโน้มสุกมาก ";
+  }
+
+  summary += `ความหวานประมาณ ${brix.toFixed(1)} บริกซ์ `;
+  const crispPct = crispPercent(firmness);
+  summary += `ความกรอบประมาณ ${crispPct.toFixed(0)} เปอร์เซ็นต์ ${crispLabel(crispPct)} `;
+  summary += `${juiceText} `;
+  summary += `${hollowVoiceLabel(hollowPercent)} `;
+
+  summary += `ระดับพอดีกินประมาณ ${ripeMeter.toFixed(0)} จาก 100 `;
+
+  summary += qualityLevelText(ripeMeter) + " ";
+
+  if(buyText.includes("น่าซื้อ")){
+    
+  }else if(buyText.includes("พิจารณา")){
+    
+  }else{
+    
+  }
+
+  if(confidence < 58){
+    summary += "ผลการวัดยังไม่นิ่ง กรุณาเคาะใหม่อีกครั้ง";
+  }else if(confidence < 75){
+    summary += "ผลการวัดมีความเชื่อมั่นระดับปานกลาง";
+  }else{
+    summary += "ผลการวัดมีความเชื่อมั่นสูง";
+  }
+
+  try{
+    speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(summary);
+    utter.lang = "th-TH";
+    utter.rate = 0.92;
+    utter.pitch = 1.0;
+    utter.volume = 1.0;
+
+    const voices = speechSynthesis.getVoices();
+    const thaiVoice = voices.find(v => v.lang && v.lang.toLowerCase().includes("th"));
+    if(thaiVoice){ utter.voice = thaiVoice; }
+
+    speechSynthesis.speak(utter);
+  }catch(e){
+    console.log(e);
+  }
 }
 
 </script>
