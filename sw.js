@@ -1,4 +1,4 @@
-const CACHE_NAME = "melon-no-hollow-effect-v13-3";
+const CACHE_NAME = "melon-quality-ai-v12";
 const urlsToCache = ["./","./index.html","./manifest.json","./icon.png"];
 
 self.addEventListener("install", e => {

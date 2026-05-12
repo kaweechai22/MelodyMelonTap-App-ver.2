@@ -51,7 +51,7 @@
 🎙 AI Voice Assistant พร้อมอ่านสรุปผลอัตโนมัติ | เสียงอ่าน: พอดีกิน
 </div>
 
-  <div style="text-align:center;font-size:.95rem;color:#60707a;margin-top:-.4rem;margin-bottom:.8rem;">Version: v2026.05.12-no-hollow-effect-v13.3</div>
+  <div style="text-align:center;font-size:.95rem;color:#60707a;margin-top:-.4rem;margin-bottom:.8rem;">Version: v2026.05.12-quality-ai-v12</div>
   <div class="card">
     <div id="watermelon" class="watermelon"></div>
     <div class="controls">
@@ -402,21 +402,6 @@ function setSignalQuality(label, cls){
   el.innerText = `คุณภาพสัญญาณ: ${label}`;
   el.className = `sig sig-${cls}`;
 }
-
-function hollowBorderColor(hollowPercent){
-  const melon = document.getElementById("watermelon");
-  if(!melon) return;
-  if(hollowPercent < 8){
-    melon.style.boxShadow = "0 0 0 6px rgba(46,125,50,.75), 0 8px 28px rgba(0,0,0,.25)";
-  } else if(hollowPercent < 15){
-    melon.style.boxShadow = "0 0 0 6px rgba(255,193,7,.75), 0 8px 28px rgba(0,0,0,.25)";
-  } else if(hollowPercent < 25){
-    melon.style.boxShadow = "0 0 0 6px rgba(251,140,0,.75), 0 8px 28px rgba(0,0,0,.25)";
-  } else {
-    melon.style.boxShadow = "0 0 0 6px rgba(211,47,47,.75), 0 8px 28px rgba(0,0,0,.25)";
-  }
-}
-
 function updateWatermelonColor(fleshColor){
   const melon = document.getElementById("watermelon");
   melon.style.background = `radial-gradient(circle at center, ${fleshColor} 70%, #2e7d32 30%)`;
@@ -674,7 +659,6 @@ function analyzeSession(){
   }
 
   updateWatermelonColor(ripe.flesh);
-  hollowBorderColor(hollowPercent);
 
   const result=document.getElementById("result");
   result.style.backgroundColor=ripe.color;
@@ -768,7 +752,6 @@ function resetAll(){
   document.getElementById("scoreExplain").innerText = "ยังไม่มีการประเมิน";
   ["brixBar","firmBar","juiceBar","hollowBar","confBar"].forEach(id=>setBar(id,0));
   updateWatermelonColor("#ff5252");
-  hollowBorderColor(0);
   setSignalQuality("รอวัด", "mid");
   document.getElementById("startBtn").disabled=false;
 }
@@ -780,7 +763,6 @@ function shareResult(){
 function setStatus(msg){document.getElementById("status").innerText=`สถานะ: ${msg}`;}
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}
 updateWatermelonColor("#ff5252");
-  hollowBorderColor(0);
 updateHistory();
 
 // ===== Voice wording override v11.2 =====
