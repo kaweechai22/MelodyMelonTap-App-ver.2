@@ -1,4 +1,4 @@
-const CACHE_NAME = "melon-hollow-visual-v13";
+const CACHE_NAME = "melon-hollow-visual-v13-1-touchfix";
 const urlsToCache = ["./","./index.html","./manifest.json","./icon.png"];
 
 self.addEventListener("install", e => {
