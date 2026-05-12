@@ -47,6 +47,7 @@
 <body>
 <div class="wrap">
   <h1>MelodyMelonTap 🎤🍉</h1>
+  <div style="text-align:center;font-size:.95rem;color:#60707a;margin-top:-.4rem;margin-bottom:.8rem;">Version: v2026.05.12-ripeness-score-v9</div>
   <div class="card">
     <div id="watermelon" class="watermelon"></div>
     <div class="controls">
@@ -55,7 +56,7 @@
       <button class="secondary" onclick="shareResult()">แชร์ผลลัพธ์</button>
     </div>
     <p id="status">สถานะ: พร้อมเริ่มวัด</p>
-    <div class="small">วิเคราะห์ช่วง <span class="mono">50–900 Hz</span> | จำนวนครั้ง <span id="tapProgress">0/5</span></div>
+    <div class="small">วิเคราะห์ช่วง <span class="mono">50–1000 Hz</span> | จำนวนครั้ง <span id="tapProgress">0/5</span></div>
     <div id="signalBadge" class="sig sig-mid">คุณภาพสัญญาณ: รอวัด</div>
   </div>
 
@@ -169,21 +170,60 @@ function classifyRipenessAI(Q, f_mean, f_std, f_variance, hollow_index){
 }
 
 // ===== AI-fitted direct regressions from app vs real =====
-function predictBrixAI(Q, tau, f_mean, f_std, f_variance, hollow_index) {
-  let y = 18.309288 + (0.077074)*safe(Q,10) + (-0.126312)*safe(tau,0.11) + (-0.100922)*safe(f_mean,280) + (0.484935)*safe(f_std,95) + (-0.00068012)*safe(f_variance,10000) + (-72.380178)*safe(hollow_index,0.18);
-  // conservative pull toward realistic range
-  return Math.max(8.0, Math.min(y, 13.2));
+function predictBrixAI(Q, tau, f_mean, f_std, f_variance, hollow_index, high_ratio=0, low_ratio=0, flatness=0) {
+  let y = 19.990909
+    + 0.005002 * safe(f_mean,280) // f_peak proxy
+    - 0.031341 * safe(Q,5)
+    + 0.378328 * safe(tau,0.11)
+    - 0.008654 * safe(f_mean,280)
+    + 0.070264 * safe(f_std,95)
+    - 0.000128258 * safe(f_variance,10000)
+    - 23.972249 * safe(hollow_index,0.18)
+    - 7.813234 * safe(high_ratio,0.1)
+    + 7.688727 * safe(low_ratio,0.5)
+    - 12.275434 * safe(flatness,0.15);
+  return Math.max(7.0, Math.min(y, 14.5));
 }
-function predictFirmnessAI(Q, tau, f_mean, f_std, f_variance, hollow_index) {
-  let y = 12.178444 + (0.044838)*safe(Q,10) + (0.073815)*safe(tau,0.11) + (0.295386)*safe(f_mean,280) + (-1.419989)*safe(f_std,95) + (0.00227155)*safe(f_variance,10000) + (150.926310)*safe(hollow_index,0.18);
-  return Math.max(3, Math.min(y, 24));
+function predictFirmnessAI(Q, tau, f_mean, f_std, f_variance, hollow_index, high_ratio=0, low_ratio=0, flatness=0) {
+  let y = -212.074176
+    - 0.023771 * safe(f_mean,280) // f_peak proxy
+    - 0.142611 * safe(Q,5)
+    + 0.298410 * safe(tau,0.11)
+    + 0.568354 * safe(f_mean,280)
+    + 0.110942 * safe(f_std,95)
+    - 0.000612692 * safe(f_variance,10000)
+    + 132.800404 * safe(hollow_index,0.18)
+    - 100.318645 * safe(high_ratio,0.1)
+    + 13.988026 * safe(low_ratio,0.5)
+    - 63.463784 * safe(flatness,0.15);
+  return Math.max(0, Math.min(y, 35));
 }
-function predictJuiceAI(Q, tau, f_mean, f_std, f_variance, hollow_index) {
-  let y = 92.897751 + (-0.273790)*safe(Q,10) + (-0.407072)*safe(tau,0.11) + (-0.159756)*safe(f_mean,280) + (0.312748)*safe(f_std,95) + (-0.00029572)*safe(f_variance,10000) + (-24.195128)*safe(hollow_index,0.18);
-  return Math.max(52, Math.min(y, 86));
+function predictJuiceAI(Q, tau, f_mean, f_std, f_variance, hollow_index, high_ratio=0, low_ratio=0, flatness=0) {
+  let y = 122.676861
+    - 0.005557 * safe(f_mean,280) // f_peak proxy
+    + 0.018828 * safe(Q,5)
+    - 0.017698 * safe(tau,0.11)
+    - 0.068299 * safe(f_mean,280)
+    - 0.196686 * safe(f_std,95)
+    - 0.000117472 * safe(f_variance,10000)
+    - 0.017408 * safe(hollow_index,0.18)
+    + 0.028820 * safe(high_ratio,0.1)
+    + 0.012851 * safe(low_ratio,0.5)
+    + 0.023026 * safe(flatness,0.15);
+  return Math.max(45, Math.min(y, 92));
 }
-function predictHollowAI(Q, tau, f_mean, f_std, f_variance, hollow_index) {
-  let y = -1.100751 + (-0.002724)*safe(Q,10) + (-0.001046)*safe(tau,0.11) + (-0.000356)*safe(f_mean,280) + (0.009191)*safe(f_std,95) + (-0.00001828)*safe(f_variance,10000) + (0.542795)*safe(hollow_index,0.18);
+function predictHollowAI(Q, tau, f_mean, f_std, f_variance, hollow_index, high_ratio=0, low_ratio=0, flatness=0) {
+  let y = 0.038329
+    - 0.000265 * safe(f_mean,280) // f_peak proxy
+    + 0.0000474 * safe(Q,5)
+    + 0.004110 * safe(tau,0.11)
+    - 0.000601 * safe(f_mean,280)
+    + 0.003504 * safe(f_std,95)
+    - 0.00001042 * safe(f_variance,10000)
+    - 0.000197 * safe(hollow_index,0.18)
+    - 0.00000539 * safe(high_ratio,0.1)
+    + 0.000274 * safe(low_ratio,0.5)
+    + 0.0000567 * safe(flatness,0.15);
   return Math.max(0, Math.min(y, 0.35));
 }
 
@@ -273,7 +313,7 @@ function extractFeaturesFromEvent(frames){
   const freqs=[], mags=[];
   for(let i=0;i<nBins;i++){
     const f=i*binSize;
-    if(f>=50&&f<=900){
+    if(f>=50&&f<=1000){
       const mag=Math.pow(10, avgDb[i]/20);
       freqs.push(f);
       mags.push(isFinite(mag)?mag:0);
@@ -324,7 +364,19 @@ function extractFeaturesFromEvent(frames){
   }
 
   const quality = assessSignalQuality({Q, bw, fPeak, fMean, fStd, tau, magSum, tauWasFallback});
-  return {fPeak,Q,tau,fMean,fStd,fVar,hollow,bw,quality,tauWasFallback};
+  
+  const eTotal = mags.reduce((s,m)=>s+m*m,0);
+  let eLow=0, eHigh=0;
+  for(let i=0;i<freqs.length;i++){
+    if(freqs[i]>=50 && freqs[i]<300) eLow += mags[i]*mags[i];
+    if(freqs[i]>=600 && freqs[i]<=1000) eHigh += mags[i]*mags[i];
+  }
+  const lowRatio = eTotal>0 ? eLow/eTotal : 0.5;
+  const highRatio = eTotal>0 ? eHigh/eTotal : 0.1;
+  const gm = Math.exp(mags.map(m=>Math.log(Math.max(m,1e-12))).reduce((a,b)=>a+b,0)/mags.length);
+  const am = mags.reduce((a,b)=>a+b,0)/mags.length;
+  const flatness = am>0 ? gm/am : 0.15;
+  return {fPeak,Q,tau,fMean,fStd,fVar,hollow,bw,quality,tauWasFallback,highRatio,lowRatio,flatness};
 }
 
 function assessSignalQuality(feat){
@@ -352,9 +404,77 @@ function updateWatermelonColor(fleshColor){
 }
 function setBar(id, percent){ document.getElementById(id).style.width = `${clamp(percent,0,100)}%`; }
 
+
+// ===== Multi-factor AI Ripeness Score v9 =====
+// ใช้ค่าทำนายคุณภาพ + feature เสียง ไม่ใช้ Q อย่างเดียว
+function scoreRipenessAI(Q, tau, brix, firmness, juice, hollowPercent, f_mean, f_std, f_variance){
+  Q = safe(Q, 10);
+  tau = safe(tau, 0.11);
+  brix = safe(brix, 10);
+  firmness = safe(firmness, 15);
+  juice = safe(juice, 65);
+  hollowPercent = safe(hollowPercent, 10);
+  f_mean = safe(f_mean, 280);
+  f_std = safe(f_std, 90);
+  f_variance = safe(f_variance, 10000);
+
+  // คะแนนความเป็นไปได้ของแต่ละระดับ
+  let raw = {E:0, D:0, C:0, A:0};
+
+  // ดิบ: Brix ต่ำ, เนื้อแน่น, Q สูง, โพรงต่ำ/กลาง
+  raw.E += (14 - clamp(brix, 8, 14)) * 11;
+  raw.E += clamp((firmness - 14) * 2.2, 0, 35);
+  raw.E += clamp((Q - 12) * 4.0, 0, 35);
+  raw.E += clamp((62 - juice) * 1.1, 0, 25);
+
+  // ใกล้สุก: Brix ปานกลาง, เนื้อยังแน่น, ฉ่ำเริ่มดี, โพรงต่ำ
+  raw.D += 45 - Math.abs(brix - 10.8) * 10;
+  raw.D += 30 - Math.abs(firmness - 17) * 1.6;
+  raw.D += 25 - Math.abs(juice - 66) * 0.9;
+  raw.D += clamp((14 - hollowPercent) * 1.4, 0, 25);
+  raw.D += clamp((Q - 9) * 2.0, 0, 20);
+
+  // สุกพอดี: Brix ดี, firmness ปานกลาง, juice ดี, โพรงต่ำ
+  raw.C += 50 - Math.abs(brix - 11.7) * 12;
+  raw.C += 35 - Math.abs(firmness - 13.5) * 2.0;
+  raw.C += 35 - Math.abs(juice - 70) * 1.0;
+  raw.C += clamp((12 - hollowPercent) * 2.0, -25, 30);
+  raw.C += clamp((f_mean - 230) * 0.05, -10, 15);
+
+  // สุกเกิน/อาจเน่า: เนื้อนิ่ม, โพรงสูง, Q ต่ำ, damping/variance ผิดปกติ
+  raw.A += clamp((10.5 - firmness) * 4.5, 0, 45);
+  raw.A += clamp((hollowPercent - 12) * 3.0, 0, 55);
+  raw.A += clamp((9.5 - Q) * 5.0, 0, 35);
+  raw.A += clamp((f_std - 100) * 0.35, 0, 25);
+  raw.A += clamp((f_variance - 12000) * 0.0012, 0, 25);
+
+  // กันค่าติดลบเกินไป
+  for (const k of Object.keys(raw)) raw[k] = Math.max(0, raw[k]);
+
+  let best = "C";
+  let bestScore = -Infinity;
+  for (const [k,v] of Object.entries(raw)){
+    if (v > bestScore){ best = k; bestScore = v; }
+  }
+
+  const total = Object.values(raw).reduce((a,b)=>a+b,0) || 1;
+  const confidence = clamp((bestScore / total) * 100, 25, 95);
+
+  return {
+    group: best,
+    confidence: confidence,
+    scores: raw
+  };
+}
+
+function ripenessScoreExplain(result){
+  const s = result.scores;
+  return `E:${s.E.toFixed(0)} D:${s.D.toFixed(0)} C:${s.C.toFixed(0)} A:${s.A.toFixed(0)}`;
+}
+
 function analyzeSession(){
   const avg={};
-  ['fPeak','Q','tau','fMean','fStd','fVar','hollow','bw'].forEach(k=>{
+  ['fPeak','Q','tau','fMean','fStd','fVar','hollow','bw','highRatio','lowRatio','flatness'].forEach(k=>{
     const vals=tapFeatures.map(t=>t[k]).filter(v=>isFinite(v));
     avg[k]=vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : getFallback(k);
   });
@@ -373,15 +493,20 @@ function analyzeSession(){
   const fStdUse = safe(avg.fStd, getFallback("fStd"));
   const fVarUse = safe(avg.fVar, getFallback("fVar"));
   const hollowIndexUse = safe(avg.hollow, getFallback("hollow"));
+  const highRatioUse = safe(avg.highRatio,0.1);
+  const lowRatioUse = safe(avg.lowRatio,0.5);
+  const flatnessUse = safe(avg.flatness,0.15);
 
-  const group = classifyRipenessAI(Quse, fMeanUse, fStdUse, fVarUse, hollowIndexUse);
+  let group = "C";
 
   const ripe=ripenessFromGroup(group);
-  const brix=predictBrixAI(Quse, tauUsed, fMeanUse, fStdUse, fVarUse, hollowIndexUse);
-  const firmness=predictFirmnessAI(Quse, tauUsed, fMeanUse, fStdUse, fVarUse, hollowIndexUse);
-  const juice=predictJuiceAI(Quse, tauUsed, fMeanUse, fStdUse, fVarUse, hollowIndexUse);
-  const hPred=predictHollowAI(Quse, tauUsed, fMeanUse, fStdUse, fVarUse, hollowIndexUse);
+  const brix=predictBrixAI(Quse, tauUsed, fMeanUse, fStdUse, fVarUse, hollowIndexUse, highRatioUse, lowRatioUse, flatnessUse);
+  const firmness=predictFirmnessAI(Quse, tauUsed, fMeanUse, fStdUse, fVarUse, hollowIndexUse, highRatioUse, lowRatioUse, flatnessUse);
+  const juice=predictJuiceAI(Quse, tauUsed, fMeanUse, fStdUse, fVarUse, hollowIndexUse, highRatioUse, lowRatioUse, flatnessUse);
+  const hPred=predictHollowAI(Quse, tauUsed, fMeanUse, fStdUse, fVarUse, hollowIndexUse, highRatioUse, lowRatioUse, flatnessUse);
   const hollowPercent = hPred * 100;
+  const ripenessAI = scoreRipenessAI(Quse, tauUsed, brix, firmness, juice, hollowPercent, fMeanUse, fStdUse, fVarUse);
+  group = ripenessAI.group;
   const hollowText = hollowLabel(hollowPercent);
 
   // confidence should not be high for bad fruits / fallback tau / high hollow
@@ -481,6 +606,11 @@ function analyzeSession(){
     <li>f_variance: ${fVarUse.toFixed(1)}</li>
     <li>hollow_index: ${hollowIndexUse.toFixed(3)}</li>
     <li>Hollow predicted: ${hollowPercent.toFixed(1)}%</li>
+    <li>Ripeness scores: ${ripenessScoreExplain(ripenessAI)}</li>
+    <li>Ripeness confidence: ${ripenessAI.confidence.toFixed(0)}%</li>
+    <li>high_ratio: ${highRatioUse.toFixed(3)}</li>
+    <li>low_ratio: ${lowRatioUse.toFixed(3)}</li>
+    <li>spectral flatness: ${flatnessUse.toFixed(3)}</li>
     <li>bandwidth (-3 dB): ${safe(avg.bw,getFallback("bw")).toFixed(2)}</li>
     <li>คุณภาพสัญญาณ: ${sigLabel} (${sigScore.toFixed(0)}%)</li>
     <li>Melon Score: ${melonScore}/100</li>`;

@@ -38,3 +38,15 @@
 - เพิ่มการเคาะจาก 3 ครั้งเป็น 5 ครั้ง
 - ใช้ trimmed mean ตัดค่าต่ำสุดและสูงสุดออกก่อนเฉลี่ย
 - ถ้าความเชื่อมั่นต่ำ / สัญญาณไม่ดี / ค่าแกว่งมาก แอปจะไม่สรุปผลและให้วัดใหม่
+
+
+## Full-system v8
+- เพิ่ม feature จากเสียงดิบ: high_ratio, low_ratio, spectral flatness
+- ปรับสูตร Brix/Firmness/Juice/Hollow จากการวิเคราะห์เสียงและข้อมูลจริง 50 ลูก
+- ช่วงวิเคราะห์ความถี่ 50–1000 Hz
+
+
+## v9 Multi-factor AI Ripeness Score
+- ระดับการสุกไม่ใช้ Q อย่างเดียวแล้ว
+- ใช้ Brix, Firmness, Juice, Hollow, Q, tau, f_mean, f_std, f_variance ร่วมกัน
+- แสดงคะแนนย่อย E/D/C/A ใน feature list เพื่อใช้ตรวจสอบโมเดล
